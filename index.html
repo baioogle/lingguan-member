@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>凌冠会员信息表</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body { padding: 20px; }
+        .tab-content { margin-top: 20px; }
+        .filter-area { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .time-control { margin-bottom: 20px; padding: 10px; background: #e9ecef; border-radius: 5px; }
+        table th { text-align: center; }
+        table td { vertical-align: middle; text-align: center; }
+        .operation-btn { display: flex; gap: 5px; justify-content: center; }
+        .clear-data-area { 
+            border-top: 1px solid #dee2e6; 
+            padding-top: 20px; 
+            margin-top: 20px; 
+        }
+        .reward-reminder {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .demo-data-btn {
+            margin-left: 10px;
+        }
+        .level-member { color: #6c757d; }
+        .level-area { color: #198754; font-weight: bold; }
+        .level-city { color: #0d6efd; font-weight: bold; }
+        .green-points-warning {
+            color: #ffc107;
+            font-weight: bold;
+            background-color: #fff3cd;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        .success-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            min-width: 300px;
+            max-width: 500px;
+        }
+        /* 统计表新增样式 */
+        .stat-card {
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .stat-card .card-header {
+            background-color: #0d6efd;
+            color: white;
+            font-weight: bold;
+        }
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .stat-row {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div id="successToast" class="toast success-message" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-success text-white">
+            <strong class="me-auto">操作成功</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <span id="successMessage"></span>
+        </div>
+    </div>
+
+    <div id="errorToast" class="toast success-message" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+            <strong class="me-auto">操作失败</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <span id="errorMessage"></span>
+        </div>
+    </div>
+
+    <div class="time-control">
+        <h5>基准时间控制</h5>
+        <button id="minusDay" class="btn btn-secondary">减少一天</button>
+        <span id="baseTime" class="mx-3">2025-09-09</span>
+        <button id="addDay" class="btn btn-primary">增加一天</button>
+        <button id="check16DayReward" class="btn btn-warning ms-3">检查16天奖励</button>
+        <button id="createDemoData" class="btn btn-info demo-data-btn">创建演示数据</button>
+        <div id="greenPointsMonitor" class="mt-2" style="display: none;">
+            <span class="badge bg-warning text-dark">绿积分监控</span>
+            <span id="greenPointsAlert" class="ms-2"></span>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs" id="myTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="member-tab" data-bs-toggle="tab" data-bs-target="#member" type="button" role="tab" aria-controls="member" aria-selected="true">会员信息表</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="order-tab" data-bs-toggle="tab" data-bs-target="#order" type="button" role="tab" aria-controls="order" aria-selected="false">订单表</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="reward-tab" data-bs-toggle="tab" data-bs-target="#reward" type="button" role="tab" aria-controls="reward" aria-selected="false">积分奖励表</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="statistics-tab" data-bs-toggle="tab" data-bs-target="#statistics" type="button" role="tab" aria-controls="statistics" aria-selected="false">数据统计表</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="import-export-tab" data-bs-toggle="tab" data-bs-target="#import-export" type="button" role="tab" aria-controls="import-export" aria-selected="false">导入/导出</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="myTabContent">
+        <!-- 原有会员信息表 -->
+        <div class="tab-pane fade show active" id="member" role="tabpanel" aria-labelledby="member-tab">
+            <div class="card mb-4">
+                <div class="card-header">添加会员</div>
+                <div class="card-body">
+                    <form id="addMemberForm">
+                        <div class="row">
+                            <div class="col-md-2 mb-3">
+                                <label for="memberId">会员ID</label>
+                                <input type="number" class="form-control" id="memberId" placeholder="默认自动递增">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="memberName">姓名</label>
+                                <input type="text" class="form-control" id="memberName" required placeholder="请输入姓名">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="referrer">推荐人ID</label>
+                                <input type="number" class="form-control" id="referrer" placeholder="无则留空">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="contactPerson">接点人ID</label>
+                                <input type="number" class="form-control" id="contactPerson" placeholder="无则留空">
+                            </div>
+                            <div class="col-md-1 mb-3">
+                                <label for="memberLevel">初始级别</label>
+                                <select class="form-control" id="memberLevel">
+                                    <option value="会员">会员</option>
+                                    <option value="区代" disabled>区代（自动升级）</option>
+                                    <option value="市代" disabled>市代（自动升级）</option>
+                                </select>
+                            </div>
+                            <div class="col-md-1 mb-3">
+                                <label for="isReinvest">是否复投</label>
+                                <select class="form-control" id="isReinvest">
+                                    <option value="false">否</option>
+                                    <option value="true">是</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="registerTime">注册时间</label>
+                                <input type="date" class="form-control" id="registerTime" value="2025-09-09">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">添加会员</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">会员信息列表</div>
+                <div class="card-body">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>姓名</th>
+                                <th>推荐人</th>
+                                <th>接点人</th>
+                                <th>直推数量</th>
+                                <th>级别</th>
+                                <th>复购次数</th>
+                                <th>复投</th>
+                                <th>累计业绩</th>
+                                <th>系统奖励</th>
+                                <th>直推奖</th>
+                                <th>区代奖</th>
+                                <th>平级奖</th>
+                                <th>市代奖</th>
+                                <th>绿积分</th>
+                                <th>红积分</th>
+                                <th>累计收益</th>
+                                <th>注册时间</th>
+                                <th>是否空号</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 原有订单表 -->
+        <div class="tab-pane fade" id="order" role="tabpanel" aria-labelledby="order-tab">
+            <div class="card mb-4">
+                <div class="card-header">添加订单</div>
+                <div class="card-body">
+                    <form id="addOrderForm">
+                        <div class="row">
+                            <div class="col-md-2 mb-3">
+                                <label for="orderMemberId">会员ID</label>
+                                <input type="number" class="form-control" id="orderMemberId" required placeholder="请输入会员ID">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="orderMemberName">姓名</label>
+                                <input type="text" class="form-control" id="orderMemberName" required placeholder="请输入姓名">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="orderAmount">下单金额</label>
+                                <input type="number" class="form-control" id="orderAmount" value="1998" readonly>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="orderType">订单类型</label>
+                                <select class="form-control" id="orderType">
+                                    <option value="普通订单">普通订单</option>
+                                    <option value="复购订单">复购订单</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="orderTime">下单时间</label>
+                                <input type="date" class="form-control" id="orderTime" value="2025-09-09">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="16DayReward">16天奖励</label>
+                                <input type="text" class="form-control" id="16DayReward" value="未到时间" readonly>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">添加订单</button>
+                    </button>
+                    </form>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">订单列表</div>
+                <div class="card-body">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>姓名</th>
+                                <th>下单金额</th>
+                                <th>订单类型</th>
+                                <th>订单编号</th>
+                                <th>下单时间</th>
+                                <th>16天奖励状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 原有积分奖励表 -->
+        <div class="tab-pane fade" id="reward" role="tabpanel" aria-labelledby="reward-tab">
+            <div class="filter-area">
+                <h5>积分奖励筛选</h5>
+                <div class="row">
+                    <div class="col-md-2 mb-3">
+                        <label for="filterRewardId">奖励ID</label>
+                        <input type="number" class="form-control" id="filterRewardId" placeholder="请输入ID">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label for="filterRewardName">会员姓名</label>
+                                <input type="text" class="form-control" id="filterRewardName" placeholder="请输入姓名">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label for="filterRewardType">奖励类型</label>
+                                <select class="form-control" id="filterRewardType">
+                            <option value="">全部</option>
+                            <option value="系统奖励">系统奖励</option>
+                            <option value="直推奖">直推奖</option>
+                            <option value="区代奖">区代奖</option>
+                            <option value="平级奖">平级奖</option>
+                            <option value="市代奖">市代奖</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label for="filterStartTime">开始时间</label>
+                        <input type="date" class="form-control" id="filterStartTime">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label for="filterEndTime">结束时间</label>
+                        <input type="date" class="form-control" id="filterEndTime">
+                    </div>
+                    <div class="col-md-2 mb-3 d-flex align-items-end">
+                        <button id="filterRewardBtn" class="btn btn-primary w-100">筛选</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card mb-4">
+                <div class="card-header">添加积分奖励</div>
+                <div class="card-body">
+                    <form id="addRewardForm">
+                        <div class="row">
+                            <div class="col-md-2 mb-3">
+                                <label for="rewardMemberId">会员ID</label>
+                                <input type="number" class="form-control" id="rewardMemberId" required placeholder="请输入会员ID">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="rewardMemberName">姓名</label>
+                                <input type="text" class="form-control" id="rewardMemberName" required placeholder="请输入姓名">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="rewardType">奖励类型</label>
+                                <select class="form-control" id="rewardType" required>
+                                    <option value="系统奖励">系统奖励</option>
+                                    <option value="直推奖">直推奖</option>
+                                    <option value="区代奖">区代奖</option>
+                                    <option value="平级奖">平级奖</option>
+                                    <option value="市代奖">市代奖</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="rewardAmount">奖励数量</label>
+                                <input type="number" class="form-control" id="rewardAmount" required placeholder="请输入奖励金额">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="rewardTime">奖励时间</label>
+                                <input type="date" class="form-control" id="rewardTime" value="2025-09-09">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="targetMemberId">对方ID</label>
+                                <input type="number" class="form-control" id="targetMemberId" placeholder="无则留空">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">添加奖励</button>
+                    </form>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">积分奖励列表</div>
+                <div class="card-body">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>姓名</th>
+                                <th>奖励类型</th>
+                                <th>奖励数量</th>
+                                <th>绿积分(75%)</th>
+                                <th>红积分(25%)</th>
+                                <th>奖励时间</th>
+                                <th>对方ID</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rewardTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增：数据统计表 -->
+        <div class="tab-pane fade" id="statistics" role="tabpanel" aria-labelledby="statistics-tab">
+            <div class="row">
+                <!-- 核心概览统计 -->
+                <div class="col-12 mb-4">
+                    <div class="card stat-card">
+                        <div class="card-header">核心数据概览</div>
+                        <div class="card-body">
+                            <div class="row stat-row">
+                                <div class="col-md-2">
+                                    <div class="stat-value" id="totalMembers">0</div>
+                                    <div class="stat-label">总会员数</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="stat-value" id="areaAgents">0</div>
+                                    <div class="stat-label">区代数量</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="stat-value" id="cityAgents">0</div>
+                                    <div class="stat-label">市代数量</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="stat-value" id="totalOrders">0</div>
+                                    <div class="stat-label">总订单数</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="stat-value" id="totalOrderAmount">0</div>
+                                    <div class="stat-label">总订单金额(元)</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="stat-value" id="totalRewards">0</div>
+                                    <div class="stat-label">总奖励金额(元)</div>
+                                </div>
+                            </div>
+                            <div class="row stat-row">
+                                <div class="col-md-2">
+                                    <div class="stat-value" id="totalGreenPoints">0</div>
+                                    <div class="stat-label">总绿积分</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="stat-value" id="totalRedPoints">0</div>
+                                    <div class="stat-label">总红积分</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="stat-value" id="repurchaseOrders">0</div>
+                                    <div class="stat-label">复购订单数</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="stat-value" id="day16RewardCount">0</div>
+                                    <div class="stat-label">16天奖励已发放数</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="stat-value" id="totalPerformance">0</div>
+                                    <div class="stat-label">总业绩(元)</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="stat-value" id="emptyAccountCount">0</div>
+                                    <div class="stat-label">空号数量</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 会员级别分布统计 -->
+                <div class="col-md-6 mb-4">
+                    <div class="card stat-card">
+                        <div class="card-header">会员级别分布</div>
+                        <div class="card-body">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>级别</th>
+                                        <th>数量</th>
+                                        <th>占比</th>
+                                        <th>累计业绩(元)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="memberLevelStats">
+                                    <tr>
+                                        <td>普通会员</td>
+                                        <td id="normalMemberCount">0</td>
+                                        <td id="normalMemberRate">0%</td>
+                                        <td id="normalMemberPerformance">0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>区代</td>
+                                        <td id="areaAgentCount">0</td>
+                                        <td id="areaAgentRate">0%</td>
+                                        <td id="areaAgentPerformance">0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>市代</td>
+                                        <td id="cityAgentCount">0</td>
+                                        <td id="cityAgentRate">0%</td>
+                                        <td id="cityAgentPerformance">0</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 奖励类型统计 -->
+                <div class="col-md-6 mb-4">
+                    <div class="card stat-card">
+                        <div class="card-header">奖励类型分布</div>
+                        <div class="card-body">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>奖励类型</th>
+                                        <th>总金额(元)</th>
+                                        <th>占比</th>
+                                        <th>绿积分合计</th>
+                                        <th>红积分合计</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rewardTypeStats">
+                                    <tr>
+                                        <td>系统奖励</td>
+                                        <td id="systemRewardTotal">0</td>
+                                        <td id="systemRewardRate">0%</td>
+                                        <td id="systemRewardGreen">0</td>
+                                        <td id="systemRewardRed">0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>直推奖</td>
+                                        <td id="directRewardTotal">0</td>
+                                        <td id="directRewardRate">0%</td>
+                                        <td id="directRewardGreen">0</td>
+                                        <td id="directRewardRed">0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>区代奖</td>
+                                        <td id="areaRewardTotal">0</td>
+                                        <td id="areaRewardRate">0%</td>
+                                        <td id="areaRewardGreen">0</td>
+                                        <td id="areaRewardRed">0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>平级奖</td>
+                                        <td id="peerRewardTotal">0</td>
+                                        <td id="peerRewardRate">0%</td>
+                                        <td id="peerRewardGreen">0</td>
+                                        <td id="peerRewardRed">0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>市代奖</td>
+                                        <td id="cityRewardTotal">0</td>
+                                        <td id="cityRewardRate">0%</td>
+                                        <td id="cityRewardGreen">0</td>
+                                        <td id="cityRewardRed">0</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 订单统计（按类型/时间） -->
+                <div class="col-12 mb-4">
+                    <div class="card stat-card">
+                        <div class="card-header">订单数据统计</div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <h6>订单类型分布</h6>
+                                    <table class="table table-sm table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>订单类型</th>
+                                                <th>数量</th>
+                                                <th>金额(元)</th>
+                                                <th>占比</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>普通订单</td>
+                                                <td id="normalOrderCount">0</td>
+                                                <td id="normalOrderAmount">0</td>
+                                                <td id="normalOrderRate">0%</td>
+                                            </tr>
+                                            <tr>
+                                                <td>复购订单</td>
+                                                <td id="repurchaseOrderCount">0</td>
+                                                <td id="repurchaseOrderAmount">0</td>
+                                                <td id="repurchaseOrderRate">0%</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>16天奖励状态统计</h6>
+                                    <table class="table table-sm table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>状态</th>
+                                                <th>订单数量</th>
+                                                <th>涉及金额(元)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>未到时间</td>
+                                                <td id="rewardNotTimeCount">0</td>
+                                                <td id="rewardNotTimeAmount">0</td>
+                                            </tr>
+                                            <tr>
+                                                <td>已发放</td>
+                                                <td id="rewardIssuedCount">0</td>
+                                                <td id="rewardIssuedAmount">0</td>
+                                            </tr>
+                                            <tr>
+                                                <td>已过期</td>
+                                                <td id="rewardExpiredCount">0</td>
+                                                <td id="rewardExpiredAmount">0</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 原有导入导出 -->
+        <div class="tab-pane fade" id="import-export" role="tabpanel" aria-labelledby="import-export-tab">
+            <div class="card">
+                <div class="card-header">数据导入/导出</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <h5>数据导出</h5>
+                            <button id="exportMemberBtn" class="btn btn-primary me-2">导出会员信息表</button>
+                            <button id="exportOrderBtn" class="btn btn-primary me-2">导出订单表</button>
+                            <button id="exportRewardBtn" class="btn btn-primary">导出积分奖励表</button>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <h5>数据导入</h5>
+                            <div class="mb-3">
+                                <label for="importMemberFile" class="form-label">导入会员信息表</label>
+                                <input type="file" class="form-control" id="importMemberFile" accept=".csv">
+                                <button id="importMemberBtn" class="btn btn-success mt-2">确认导入</button>
+                            </div>
+                            <div class="mb-3">
+                                <label for="importOrderFile" class="form-label">导入订单表</label>
+                                <input type="file" class="form-control" id="importOrderFile" accept=".csv">
+                                <button id="importOrderBtn" class="btn btn-success mt-2">确认导入</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row clear-data-area">
+                        <div class="col-md-12">
+                            <h5>数据清空</h5>
+                            <p class="text-danger">⚠️ 注意：清空数据后不可恢复，请谨慎操作！</p>
+                            <button id="clearMemberBtn" class="btn btn-danger me-2">清空会员信息表</button>
+                            <button id="clearOrderBtn" class="btn btn-danger me-2">清空订单表</button>
+                            <button id="clearRewardBtn" class="btn btn-danger me-2">清空积分奖励表</button>
+                            <button id="clearAllBtn" class="btn btn-danger">清空所有表数据</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 原有编辑会员模态框 -->
+    <div class="modal fade" id="editMemberModal" tabindex="-1" aria-labelledby="editMemberModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editMemberModalLabel">编辑会员信息</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editMemberForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editMemberId">会员ID</label>
+                                <input type="number" class="form-control" id="editMemberId" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editMemberName">姓名</label>
+                                <input type="text" class="form-control" id="editMemberName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editReferrer">推荐人ID</label>
+                                <input type="number" class="form-control" id="editReferrer">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editContactPerson">接点人ID</label>
+                                <input type="number" class="form-control" id="editContactPerson">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editDirectPush">直推数量</label>
+                                <input type="number" class="form-control" id="editDirectPush" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editMemberLevel">级别</label>
+                                <select class="form-control" id="editMemberLevel">
+                                    <option value="会员">会员</option>
+                                    <option value="区代">区代</option>
+                                    <option value="市代">市代</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editIsReinvest">是否复投</label>
+                                <select class="form-control" id="editIsReinvest">
+                                    <option value="false">否</option>
+                                    <option value="true">是</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editRepurchaseTimes">复购次数</label>
+                                <input type="number" class="form-control" id="editRepurchaseTimes">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editOrderCount">订单数量</label>
+                                <input type="number" class="form-control" id="editOrderCount" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editTotalPerformance">累计业绩</label>
+                                <input type="number" class="form-control" id="editTotalPerformance" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editSystemReward">系统奖励</label>
+                                <input type="number" step="0.01" class="form-control" id="editSystemReward">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editDirectReward">直推奖</label>
+                                <input type="number" step="0.01" class="form-control" id="editDirectReward">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editAreaReward">区代奖</label>
+                                <input type="number" step="0.01" class="form-control" id="editAreaReward">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editPeerReward">平级奖</label>
+                                <input type="number" step="0.01" class="form-control" id="editPeerReward">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editCityReward">市代奖</label>
+                                <input type="number" step="0.01" class="form-control" id="editCityReward">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editGreenPoints">绿积分</label>
+                                <input type="number" step="0.01" class="form-control" id="editGreenPoints">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editRedPoints">红积分</label>
+                                <input type="number" step="0.01" class="form-control" id="editRedPoints">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editTotalIncome">累计收益</label>
+                                <input type="number" step="0.01" class="form-control" id="editTotalIncome" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editIsEmptyAccount">是否空号</label>
+                                <select class="form-control" id="editIsEmptyAccount">
+                                    <option value="false">否</option>
+                                    <option value="true">是</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editRegisterTime">注册时间</label>
+                                <input type="date" class="form-control" id="editRegisterTime">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveMemberEdit">保存修改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // 初始化本地存储
+            if (!localStorage.getItem('members')) localStorage.setItem('members', JSON.stringify([]));
+            if (!localStorage.getItem('orders')) localStorage.setItem('orders', JSON.stringify([]));
+            if (!localStorage.getItem('rewards')) localStorage.setItem('rewards', JSON.stringify([]));
+            
+            refreshAllTables();
+            updateStatistics(); // 初始化统计表
+
+            let baseTime = new Date($('#baseTime').text());
+            const ORDER_PRICE = 1998;
+            const DAY16_REWARD = 200;
+            const AREA_AGENT_DAILY_CAP = 1000;
+            const AUTO_REPURCHASE_THRESHOLD = 6000;
+            
+            function showSuccessMessage(message) {
+                $('#successMessage').text(message);
+                new bootstrap.Toast(document.getElementById('successToast')).show();
+            }
+            
+            function showErrorMessage(message) {
+                $('#errorMessage').text(message);
+                new bootstrap.Toast(document.getElementById('errorToast')).show();
+            }
+
+            function updateBaseTimeDisplay() {
+                $('#baseTime').text(formatDate(baseTime));
+            }
+
+            function formatDate(date) {
+                let year = date.getFullYear();
+                let month = (date.getMonth() + 1).toString().padStart(2, '0');
+                let day = date.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            function formatDateForOrderNo(date) {
+                let year = date.getFullYear();
+                let month = (date.getMonth() + 1).toString().padStart(2, '0');
+                let day = date.getDate().toString().padStart(2, '0');
+                return `${year}${month}${day}`;
+            }
+
+            function getMaxId(arr) {
+                if (arr.length === 0) return 0;
+                return Math.max(...arr.map(item => item.id));
+            }
+
+            function findAvailableContactPerson(referrerId) {
+                let members = JSON.parse(localStorage.getItem('members'));
+                let referrer = members.find(m => m.id === referrerId);
+                
+                if (!referrer || referrer.isEmptyAccount) return '';
+                
+                if (referrer.directPush < 3) {
+                    return referrerId;
+                } else {
+                    return findAvailableContactInTeam(referrerId);
+                }
+            }
+
+            function findAvailableContactInTeam(memberId) {
+                let members = JSON.parse(localStorage.getItem('members'));
+                let directMembers = members.filter(m => m.referrer === memberId && !m.isEmptyAccount);
+                
+                for (let m of directMembers) {
+                    if (m.directPush < 3) {
+                        return m.id;
+                    }
+                    let found = findAvailableContactInTeam(m.id);
+                    if (found) return found;
+                }
+                return '';
+            }
+
+            function recalculateDirectPush() {
+                let members = JSON.parse(localStorage.getItem('members'));
+                
+                members.forEach(member => {
+                    member.directPush = 0;
+                });
+                
+                members.forEach(member => {
+                    if (member.referrer) {
+                        let referrer = members.find(m => m.id === member.referrer);
+                        if (referrer) {
+                            referrer.directPush = (referrer.directPush || 0) + 1;
+                        }
+                    }
+                });
+                
+                localStorage.setItem('members', JSON.stringify(members));
+                return members;
+            }
+
+            function checkAreaAgentQualification(memberId) {
+                let members = JSON.parse(localStorage.getItem('members'));
+                let member = members.find(m => m.id === memberId);
+                
+                if (!member) return false;
+                if (member.isEmptyAccount) return false;
+                
+                let directMembers = members.filter(m => m.referrer === memberId && !m.isEmptyAccount);
+                if (directMembers.length < 3) return false;
+                
+                let top3DirectMembers = directMembers.sort((a, b) => a.id - b.id).slice(0, 3);
+                let totalOrdersFrom3Markets = 0;
+                
+                top3DirectMembers.forEach(directMember => {
+                    let teamOrders = getTeamOrders(directMember.id);
+                    totalOrdersFrom3Markets += teamOrders.length;
+                });
+                
+                if (totalOrdersFrom3Markets < 5) return false;
+                return true;
+            }
+
+            function checkCityAgentQualification(memberId) {
+                let members = JSON.parse(localStorage.getItem('members'));
+                let member = members.find(m => m.id === memberId);
+                
+                if (!member) return false;
+                if (member.isEmptyAccount) return false;
+                if (member.level !== '区代') return false;
+                
+                let directMembers = members.filter(m => m.referrer === memberId && !m.isEmptyAccount);
+                let areaAgentsInDirect = directMembers.filter(m => m.level === '区代');
+                if (areaAgentsInDirect.length < 3) return false;
+                
+                let teamPerformance = getTeamOrders(memberId).length * ORDER_PRICE;
+                if (teamPerformance < 100000) return false;
+                
+                return true;
+            }
+
+            function getTeamOrders(memberId) {
+                let members = JSON.parse(localStorage.getItem('members'));
+                let orders = JSON.parse(localStorage.getItem('orders'));
+                
+                function getTeamMemberIds(id) {
+                    let ids = [id];
+                    let directMembers = members.filter(m => m.referrer === id && !m.isEmptyAccount);
+                    directMembers.forEach(m => {
+                        ids = ids.concat(getTeamMemberIds(m.id));
+                    });
+                    return ids;
+                }
+                
+                let teamMemberIds = getTeamMemberIds(memberId);
+                return orders.filter(o => teamMemberIds.includes(o.memberId));
+            }
+
+            function calculateTotalPerformance(memberId) {
+                let members = JSON.parse(localStorage.getItem('members'));
+                let orders = JSON.parse(localStorage.getItem('orders'));
+                
+                let ownOrders = orders.filter(o => o.memberId === memberId);
+                let ownPerformance = ownOrders.length * ORDER_PRICE;
+                
+                let teamOrders = getTeamOrders(memberId);
+                let teamPerformance = teamOrders.filter(o => o.memberId !== memberId).length * ORDER_PRICE;
+                
+                return ownPerformance + teamPerformance;
+            }
+
+            function syncRewardsToMembers() {
+                let members = JSON.parse(localStorage.getItem('members'));
+                let rewards = JSON.parse(localStorage.getItem('rewards'));
+                
+                members.forEach(member => {
+                    member.systemReward = 0;
+                    member.directReward = 0;
+                    member.areaReward = 0;
+                    member.peerReward = 0;
+                    member.cityReward = 0;
+                    member.greenPoints = 0;
+                    member.redPoints = 0;
+                    member.totalIncome = 0;
+                });
+                
+                rewards.forEach(reward => {
+                    let member = members.find(m => m.id === reward.memberId);
+                    if (member) {
+                        switch (reward.type) {
+                            case '系统奖励':
+                                member.systemReward += reward.amount;
+                                break;
+                            case '直推奖':
+                                member.directReward += reward.amount;
+                                break;
+                            case '区代奖':
+                                member.areaReward += reward.amount;
+                                break;
+                            case '平级奖':
+                                member.peerReward += reward.amount;
+                                break;
+                            case '市代奖':
+                                member.cityReward += reward.amount;
+                                break;
+                        }
+                        
+                        member.greenPoints += reward.greenPoints;
+                        member.redPoints += reward.redPoints;
+                        member.totalIncome += reward.amount;
+                    }
+                });
+                
+                localStorage.setItem('members', JSON.stringify(members));
+                return members;
+            }
+
+            // ========== 新增：统计表核心计算逻辑 ==========
+            function updateStatistics() {
+                // 1. 获取所有数据
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+
+                // 2. 核心概览统计
+                // 会员相关
+                const totalMembers = members.length;
+                const areaAgents = members.filter(m => m.level === '区代' && !m.isEmptyAccount).length;
+                const cityAgents = members.filter(m => m.level === '市代' && !m.isEmptyAccount).length;
+                const emptyAccountCount = members.filter(m => m.isEmptyAccount).length;
+                
+                // 订单相关
+                const totalOrders = orders.length;
+                const totalOrderAmount = totalOrders * ORDER_PRICE;
+                const repurchaseOrders = orders.filter(o => o.type === '复购订单').length;
+                const normalOrders = orders.filter(o => o.type === '普通订单').length;
+                
+                // 16天奖励相关
+                const day16RewardCount = orders.filter(o => o['16DayReward'] === '已发放').length;
+                const rewardNotTimeCount = orders.filter(o => o['16DayReward'] === '未到时间').length;
+                const rewardIssuedCount = orders.filter(o => o['16DayReward'] === '已发放').length;
+                const rewardExpiredCount = orders.filter(o => o['16DayReward'] === '已过期').length;
+                
+                // 奖励相关
+                const totalRewards = rewards.reduce((sum, r) => sum + r.amount, 0);
+                const totalGreenPoints = rewards.reduce((sum, r) => sum + (r.greenPoints || 0), 0);
+                const totalRedPoints = rewards.reduce((sum, r) => sum + (r.redPoints || 0), 0);
+                
+                // 业绩相关
+                let totalPerformance = 0;
+                members.forEach(m => {
+                    totalPerformance += calculateTotalPerformance(m.id) || 0;
+                });
+
+                // 3. 赋值到概览统计DOM
+                $('#totalMembers').text(totalMembers);
+                $('#areaAgents').text(areaAgents);
+                $('#cityAgents').text(cityAgents);
+                $('#totalOrders').text(totalOrders);
+                $('#totalOrderAmount').text(totalOrderAmount.toFixed(2));
+                $('#totalRewards').text(totalRewards.toFixed(2));
+                $('#totalGreenPoints').text(totalGreenPoints.toFixed(2));
+                $('#totalRedPoints').text(totalRedPoints.toFixed(2));
+                $('#repurchaseOrders').text(repurchaseOrders);
+                $('#day16RewardCount').text(day16RewardCount);
+                $('#totalPerformance').text(totalPerformance.toFixed(2));
+                $('#emptyAccountCount').text(emptyAccountCount);
+
+                // 4. 会员级别分布统计
+                const normalMembers = members.filter(m => m.level === '会员' && !m.isEmptyAccount);
+                const normalMemberCount = normalMembers.length;
+                const normalMemberPerformance = normalMembers.reduce((sum, m) => sum + calculateTotalPerformance(m.id), 0);
+                
+                const areaAgentList = members.filter(m => m.level === '区代' && !m.isEmptyAccount);
+                const areaAgentCount = areaAgentList.length;
+                const areaAgentPerformance = areaAgentList.reduce((sum, m) => sum + calculateTotalPerformance(m.id), 0);
+                
+                const cityAgentList = members.filter(m => m.level === '市代' && !m.isEmptyAccount);
+                const cityAgentCount = cityAgentList.length;
+                const cityAgentPerformance = cityAgentList.reduce((sum, m) => sum + calculateTotalPerformance(m.id), 0);
+                
+                // 级别占比
+                const normalMemberRate = totalMembers > 0 ? ((normalMemberCount / totalMembers) * 100).toFixed(2) + '%' : '0%';
+                const areaAgentRate = totalMembers > 0 ? ((areaAgentCount / totalMembers) * 100).toFixed(2) + '%' : '0%';
+                const cityAgentRate = totalMembers > 0 ? ((cityAgentCount / totalMembers) * 100).toFixed(2) + '%' : '0%';
+                
+                // 赋值到级别分布DOM
+                $('#normalMemberCount').text(normalMemberCount);
+                $('#normalMemberRate').text(normalMemberRate);
+                $('#normalMemberPerformance').text(normalMemberPerformance.toFixed(2));
+                $('#areaAgentCount').text(areaAgentCount);
+                $('#areaAgentRate').text(areaAgentRate);
+                $('#areaAgentPerformance').text(areaAgentPerformance.toFixed(2));
+                $('#cityAgentCount').text(cityAgentCount);
+                $('#cityAgentRate').text(cityAgentRate);
+                $('#cityAgentPerformance').text(cityAgentPerformance.toFixed(2));
+
+                // 5. 奖励类型分布统计
+                const systemRewards = rewards.filter(r => r.type === '系统奖励');
+                const systemRewardTotal = systemRewards.reduce((sum, r) => sum + r.amount, 0);
+                const systemRewardGreen = systemRewards.reduce((sum, r) => sum + (r.greenPoints || 0), 0);
+                const systemRewardRed = systemRewards.reduce((sum, r) => sum + (r.redPoints || 0), 0);
+                
+                const directRewards = rewards.filter(r => r.type === '直推奖');
+                const directRewardTotal = directRewards.reduce((sum, r) => sum + r.amount, 0);
+                const directRewardGreen = directRewards.reduce((sum, r) => sum + (r.greenPoints || 0), 0);
+                const directRewardRed = directRewards.reduce((sum, r) => sum + (r.redPoints || 0), 0);
+                
+                const areaRewards = rewards.filter(r => r.type === '区代奖');
+                const areaRewardTotal = areaRewards.reduce((sum, r) => sum + r.amount, 0);
+                const areaRewardGreen = areaRewards.reduce((sum, r) => sum + (r.greenPoints || 0), 0);
+                const areaRewardRed = areaRewards.reduce((sum, r) => sum + (r.redPoints || 0), 0);
+                
+                const peerRewards = rewards.filter(r => r.type === '平级奖');
+                const peerRewardTotal = peerRewards.reduce((sum, r) => sum + r.amount, 0);
+                const peerRewardGreen = peerRewards.reduce((sum, r) => sum + (r.greenPoints || 0), 0);
+                const peerRewardRed = peerRewards.reduce((sum, r) => sum + (r.redPoints || 0), 0);
+                
+                const cityRewards = rewards.filter(r => r.type === '市代奖');
+                const cityRewardTotal = cityRewards.reduce((sum, r) => sum + r.amount, 0);
+                const cityRewardGreen = cityRewards.reduce((sum, r) => sum + (r.greenPoints || 0), 0);
+                const cityRewardRed = cityRewards.reduce((sum, r) => sum + (r.redPoints || 0), 0);
+                
+                // 奖励类型占比
+                const systemRewardRate = totalRewards > 0 ? ((systemRewardTotal / totalRewards) * 100).toFixed(2) + '%' : '0%';
+                const directRewardRate = totalRewards > 0 ? ((directRewardTotal / totalRewards) * 100).toFixed(2) + '%' : '0%';
+                const areaRewardRate = totalRewards > 0 ? ((areaRewardTotal / totalRewards) * 100).toFixed(2) + '%' : '0%';
+                const peerRewardRate = totalRewards > 0 ? ((peerRewardTotal / totalRewards) * 100).toFixed(2) + '%' : '0%';
+                const cityRewardRate = totalRewards > 0 ? ((cityRewardTotal / totalRewards) * 100).toFixed(2) + '%' : '0%';
+                
+                // 赋值到奖励类型分布DOM
+                $('#systemRewardTotal').text(systemRewardTotal.toFixed(2));
+                $('#systemRewardRate').text(systemRewardRate);
+                $('#systemRewardGreen').text(systemRewardGreen.toFixed(2));
+                $('#systemRewardRed').text(systemRewardRed.toFixed(2));
+                
+                $('#directRewardTotal').text(directRewardTotal.toFixed(2));
+                $('#directRewardRate').text(directRewardRate);
+                $('#directRewardGreen').text(directRewardGreen.toFixed(2));
+                $('#directRewardRed').text(directRewardRed.toFixed(2));
+                
+                $('#areaRewardTotal').text(areaRewardTotal.toFixed(2));
+                $('#areaRewardRate').text(areaRewardRate);
+                $('#areaRewardGreen').text(areaRewardGreen.toFixed(2));
+                $('#areaRewardRed').text(areaRewardRed.toFixed(2));
+                
+                $('#peerRewardTotal').text(peerRewardTotal.toFixed(2));
+                $('#peerRewardRate').text(peerRewardRate);
+                $('#peerRewardGreen').text(peerRewardGreen.toFixed(2));
+                $('#peerRewardRed').text(peerRewardRed.toFixed(2));
+                
+                $('#cityRewardTotal').text(cityRewardTotal.toFixed(2));
+                $('#cityRewardRate').text(cityRewardRate);
+                $('#cityRewardGreen').text(cityRewardGreen.toFixed(2));
+                $('#cityRewardRed').text(cityRewardRed.toFixed(2));
+
+                // 6. 订单类型统计
+                const normalOrderAmount = normalOrders * ORDER_PRICE;
+                const repurchaseOrderAmount = repurchaseOrders * ORDER_PRICE;
+                const normalOrderRate = totalOrders > 0 ? ((normalOrders / totalOrders) * 100).toFixed(2) + '%' : '0%';
+                const repurchaseOrderRate = totalOrders > 0 ? ((repurchaseOrders / totalOrders) * 100).toFixed(2) + '%' : '0%';
+                
+                const rewardNotTimeAmount = rewardNotTimeCount * ORDER_PRICE;
+                const rewardIssuedAmount = rewardIssuedCount * ORDER_PRICE;
+                const rewardExpiredAmount = rewardExpiredCount * ORDER_PRICE;
+                
+                // 赋值到订单统计DOM
+                $('#normalOrderCount').text(normalOrders);
+                $('#normalOrderAmount').text(normalOrderAmount.toFixed(2));
+                $('#normalOrderRate').text(normalOrderRate);
+                
+                $('#repurchaseOrderCount').text(repurchaseOrders);
+                $('#repurchaseOrderAmount').text(repurchaseOrderAmount.toFixed(2));
+                $('#repurchaseOrderRate').text(repurchaseOrderRate);
+                
+                $('#rewardNotTimeCount').text(rewardNotTimeCount);
+                $('#rewardNotTimeAmount').text(rewardNotTimeAmount.toFixed(2));
+                $('#rewardIssuedCount').text(rewardIssuedCount);
+                $('#rewardIssuedAmount').text(rewardIssuedAmount.toFixed(2));
+                $('#rewardExpiredCount').text(rewardExpiredCount);
+                $('#rewardExpiredAmount').text(rewardExpiredAmount.toFixed(2));
+            }
+
+            // ========== 原有逻辑补充（确保操作后更新统计表） ==========
+            // 重写refreshAllTables，增加统计表更新
+            function refreshAllTables() {
+                // 原有刷新会员、订单、奖励表的逻辑（保留）
+                refreshMemberTable();
+                refreshOrderTable();
+                refreshRewardTable();
+                // 新增：更新统计表
+                updateStatistics();
+            }
+
+            // 示例：原有refreshMemberTable等函数（需保留，此处为占位，需补充原有逻辑）
+            function refreshMemberTable() {
+                // 原有会员表刷新逻辑
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let tbody = $('#memberTableBody');
+                tbody.empty();
+                
+                members.forEach(member => {
+                    let tr = $(`<tr>
+                        <td>${member.id || '-'}</td>
+                        <td>${member.name || '-'}</td>
+                        <td>${member.referrer || '-'}</td>
+                        <td>${member.contactPerson || '-'}</td>
+                        <td>${member.directPush || 0}</td>
+                        <td class="${member.level === '会员' ? 'level-member' : member.level === '区代' ? 'level-area' : 'level-city'}">${member.level || '会员'}</td>
+                        <td>${member.repurchaseTimes || 0}</td>
+                        <td>${member.isReinvest === 'true' ? '是' : '否'}</td>
+                        <td>${calculateTotalPerformance(member.id).toFixed(2)}</td>
+                        <td>${(member.systemReward || 0).toFixed(2)}</td>
+                        <td>${(member.directReward || 0).toFixed(2)}</td>
+                        <td>${(member.areaReward || 0).toFixed(2)}</td>
+                        <td>${(member.peerReward || 0).toFixed(2)}</td>
+                        <td>${(member.cityReward || 0).toFixed(2)}</td>
+                        <td class="${member.greenPoints < 100 ? 'green-points-warning' : ''}">${(member.greenPoints || 0).toFixed(2)}</td>
+                        <td>${(member.redPoints || 0).toFixed(2)}</td>
+                        <td>${(member.totalIncome || 0).toFixed(2)}</td>
+                        <td>${member.registerTime || '-'}</td>
+                        <td>${member.isEmptyAccount ? '是' : '否'}</td>
+                        <td class="operation-btn">
+                            <button class="btn btn-sm btn-primary edit-member" data-id="${member.id}">编辑</button>
+                            <button class="btn btn-sm btn-danger delete-member" data-id="${member.id}">删除</button>
+                        </td>
+                    </tr>`);
+                    tbody.append(tr);
+                });
+            }
+
+            function refreshOrderTable() {
+                // 原有订单表刷新逻辑
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let tbody = $('#orderTableBody');
+                tbody.empty();
+                
+                orders.forEach(order => {
+                    let tr = $(`<tr>
+                        <td>${order.id || '-'}</td>
+                        <td>${order.memberName || '-'}</td>
+                        <td>${order.amount || 1998}</td>
+                        <td>${order.type || '普通订单'}</td>
+                        <td>${order.orderNo || '-'}</td>
+                        <td>${order.time || '-'}</td>
+                        <td>${order['16DayReward'] || '未到时间'}</td>
+                        <td class="operation-btn">
+                            <button class="btn btn-sm btn-danger delete-order" data-id="${order.id}">删除</button>
+                        </td>
+                    </tr>`);
+                    tbody.append(tr);
+                });
+            }
+
+            function refreshRewardTable() {
+                // 原有奖励表刷新逻辑
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                let tbody = $('#rewardTableBody');
+                tbody.empty();
+                
+                rewards.forEach(reward => {
+                    let tr = $(`<tr>
+                        <td>${reward.id || '-'}</td>
+                        <td>${reward.memberName || '-'}</td>
+                        <td>${reward.type || '-'}</td>
+                        <td>${(reward.amount || 0).toFixed(2)}</td>
+                        <td>${(reward.greenPoints || 0).toFixed(2)}</td>
+                        <td>${(reward.redPoints || 0).toFixed(2)}</td>
+                        <td>${reward.time || '-'}</td>
+                        <td>${reward.targetMemberId || '-'}</td>
+                        <td class="operation-btn">
+                            <button class="btn btn-sm btn-danger delete-reward" data-id="${reward.id}">删除</button>
+                        </td>
+                    </tr>`);
+                    tbody.append(tr);
+                });
+            }
+
+            // ========== 原有事件绑定（保留） ==========
+            // 基准时间控制
+            $('#minusDay').click(function() {
+                baseTime.setDate(baseTime.getDate() - 1);
+                updateBaseTimeDisplay();
+                refreshAllTables();
+            });
+
+            $('#addDay').click(function() {
+                baseTime.setDate(baseTime.getDate() + 1);
+                updateBaseTimeDisplay();
+                refreshAllTables();
+            });
+
+            // 添加会员
+            $('#addMemberForm').submit(function(e) {
+                e.preventDefault();
+                let members = JSON.parse(localStorage.getItem('members'));
+                let newId = getMaxId(members) + 1;
+                
+                let member = {
+                    id: $('#memberId').val() || newId,
+                    name: $('#memberName').val(),
+                    referrer: $('#referrer').val() ? parseInt($('#referrer').val()) : '',
+                    contactPerson: $('#contactPerson').val() ? parseInt($('#contactPerson').val()) : findAvailableContactPerson($('#referrer').val()),
+                    directPush: 0,
+                    level: $('#memberLevel').val(),
+                    isReinvest: $('#isReinvest').val(),
+                    repurchaseTimes: 0,
+                    totalPerformance: 0,
+                    systemReward: 0,
+                    directReward: 0,
+                    areaReward: 0,
+                    peerReward: 0,
+                    cityReward: 0,
+                    greenPoints: 0,
+                    redPoints: 0,
+                    totalIncome: 0,
+                    registerTime: $('#registerTime').val(),
+                    isEmptyAccount: false
+                };
+                
+                members.push(member);
+                localStorage.setItem('members', JSON.stringify(members));
+                recalculateDirectPush();
+                refreshAllTables();
+                showSuccessMessage('会员添加成功！');
+                this.reset();
+            });
+
+            // 添加订单
+            $('#addOrderForm').submit(function(e) {
+                e.preventDefault();
+                let orders = JSON.parse(localStorage.getItem('orders'));
+                let newId = getMaxId(orders) + 1;
+                
+                let order = {
+                    id: newId,
+                    memberId: parseInt($('#orderMemberId').val()),
+                    memberName: $('#orderMemberName').val(),
+                    amount: parseInt($('#orderAmount').val()),
+                    type: $('#orderType').val(),
+                    orderNo: 'ORD' + formatDateForOrderNo(new Date($('#orderTime').val())) + newId.toString().padStart(4, '0'),
+                    time: $('#orderTime').val(),
+                    '16DayReward': '未到时间'
+                };
+                
+                orders.push(order);
+                localStorage.setItem('orders', JSON.stringify(orders));
+                
+                // 更新会员复购次数
+                let members = JSON.parse(localStorage.getItem('members'));
+                let member = members.find(m => m.id === order.memberId);
+                if (member && order.type === '复购订单') {
+                    member.repurchaseTimes = (member.repurchaseTimes || 0) + 1;
+                    localStorage.setItem('members', JSON.stringify(members));
+                }
+                
+                refreshAllTables();
+                showSuccessMessage('订单添加成功！');
+                this.reset();
+            });
+
+            // 添加奖励
+            $('#addRewardForm').submit(function(e) {
+                e.preventDefault();
+                let rewards = JSON.parse(localStorage.getItem('rewards'));
+                let newId = getMaxId(rewards) + 1;
+                
+                let amount = parseFloat($('#rewardAmount').val());
+                let greenPoints = amount * 0.75;
+                let redPoints = amount * 0.25;
+                
+                let reward = {
+                    id: newId,
+                    memberId: parseInt($('#rewardMemberId').val()),
+                    memberName: $('#rewardMemberName').val(),
+                    type: $('#rewardType').val(),
+                    amount: amount,
+                    greenPoints: greenPoints,
+                    redPoints: redPoints,
+                    time: $('#rewardTime').val(),
+                    targetMemberId: $('#targetMemberId').val() ? parseInt($('#targetMemberId').val()) : ''
+                };
+                
+                rewards.push(reward);
+                localStorage.setItem('rewards', JSON.stringify(rewards));
+                syncRewardsToMembers();
+                refreshAllTables();
+                showSuccessMessage('奖励添加成功！');
+                this.reset();
+            });
+
+            // 检查16天奖励
+            $('#check16DayReward').click(function() {
+                let orders = JSON.parse(localStorage.getItem('orders'));
+                let baseDate = new Date($('#baseTime').text());
+                
+                orders.forEach(order => {
+                    let orderDate = new Date(order.time);
+                    let diffTime = Math.abs(baseDate - orderDate);
+                    let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays === 16) {
+                        order['16DayReward'] = '已发放';
+                        // 添加16天奖励到奖励表
+                        let rewards = JSON.parse(localStorage.getItem('rewards'));
+                        let newId = getMaxId(rewards) + 1;
+                        rewards.push({
+                            id: newId,
+                            memberId: order.memberId,
+                            memberName: order.memberName,
+                            type: '系统奖励',
+                            amount: DAY16_REWARD,
+                            greenPoints: DAY16_REWARD * 0.75,
+                            redPoints: DAY16_REWARD * 0.25,
+                            time: formatDate(baseDate),
+                            targetMemberId: ''
+                        });
+                        localStorage.setItem('rewards', JSON.stringify(rewards));
+                        syncRewardsToMembers();
+                    } else if (diffDays > 16) {
+                        order['16DayReward'] = '已过期';
+                    }
+                });
+                
+                localStorage.setItem('orders', JSON.stringify(orders));
+                refreshAllTables();
+                showSuccessMessage('16天奖励检查完成！');
+            });
+
+            // 创建演示数据
+            $('#createDemoData').click(function() {
+                // 清空原有数据
+                localStorage.setItem('members', JSON.stringify([]));
+                localStorage.setItem('orders', JSON.stringify([]));
+                localStorage.setItem('rewards', JSON.stringify([]));
+                
+                // 添加演示会员
+                let demoMembers = [
+                    {id: 1, name: '张三', referrer: '', contactPerson: '', directPush: 2, level: '区代', isReinvest: 'true', repurchaseTimes: 1, registerTime: '2025-09-01', isEmptyAccount: false},
+                    {id: 2, name: '李四', referrer: 1, contactPerson: 1, directPush: 1, level: '会员', isReinvest: 'false', repurchaseTimes: 0, registerTime: '2025-09-02', isEmptyAccount: false},
+                    {id: 3, name: '王五', referrer: 1, contactPerson: 1, directPush: 0, level: '会员', isReinvest: 'true', repurchaseTimes: 2, registerTime: '2025-09-03', isEmptyAccount: false},
+                    {id: 4, name: '赵六', referrer: 2, contactPerson: 2, directPush: 0, level: '会员', isReinvest: 'false', repurchaseTimes: 0, registerTime: '2025-09-04', isEmptyAccount: true},
+                    {id: 5, name: '钱七', referrer: 1, contactPerson: 1, directPush: 3, level: '市代', isReinvest: 'true', repurchaseTimes: 3, registerTime: '2025-09-05', isEmptyAccount: false}
+                ];
+                localStorage.setItem('members', JSON.stringify(demoMembers));
+                
+                // 添加演示订单
+                let demoOrders = [
+                    {id: 1, memberId: 1, memberName: '张三', amount: 1998, type: '普通订单', orderNo: 'ORD202509010001', time: '2025-09-01', '16DayReward': '已发放'},
+                    {id: 2, memberId: 1, memberName: '张三', amount: 1998, type: '复购订单', orderNo: 'ORD202509080002', time: '2025-09-08', '16DayReward': '未到时间'},
+                    {id: 3, memberId: 2, memberName: '李四', amount: 1998, type: '普通订单', orderNo: 'ORD20
