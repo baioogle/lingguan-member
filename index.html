@@ -95,13 +95,107 @@
             background-color: #f8f9fa;
             font-weight: bold;
         }
-        .chart-container {
-            height: 300px;
-            position: relative;
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            flex-direction: column;
+            display: none;
+        }
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-text {
+            font-size: 1.2rem;
+            color: #333;
+            font-weight: 500;
+        }
+        .progress-container {
+            width: 300px;
+            margin-top: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 20px;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        /* 搜索区域样式 */
+        .search-area {
+            background: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .search-title {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .search-results {
+            margin-top: 20px;
+        }
+        .member-tree {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+        .tree-node {
+            padding: 5px 10px;
+            margin: 2px 0;
+            background-color: white;
+            border-radius: 3px;
+            border-left: 3px solid #0d6efd;
+        }
+        .tree-node.level-1 { margin-left: 0px; border-left-color: #198754; }
+        .tree-node.level-2 { margin-left: 20px; border-left-color: #0d6efd; }
+        .tree-node.level-3 { margin-left: 40px; border-left-color: #6c757d; }
+        .tree-node.level-4 { margin-left: 60px; border-left-color: #ffc107; }
+        .tree-node.level-5 { margin-left: 80px; border-left-color: #dc3545; }
+        .member-link {
+            cursor: pointer;
+            color: #0d6efd;
+            text-decoration: underline;
+        }
+        .member-link:hover {
+            color: #0b5ed7;
+            text-decoration: none;
         }
     </style>
 </head>
 <body>
+    <!-- 加载遮罩层 -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">正在处理，请稍候...</div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+    </div>
+
     <!-- 成功提示 -->
     <div id="successToast" class="toast success-message" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="toast-header bg-success text-white">
@@ -165,6 +259,40 @@
     <div class="tab-content" id="myTabContent">
         <!-- 会员信息标签页 -->
         <div class="tab-pane fade show active" id="member" role="tabpanel" aria-labelledby="member-tab">
+            <!-- 搜索区域 -->
+            <div class="search-area">
+                <h5 class="search-title">🔍 会员搜索与筛选</h5>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="searchMemberId" class="form-label">按ID搜索</label>
+                        <input type="number" class="form-control" id="searchMemberId" placeholder="输入会员ID">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="searchMemberName" class="form-label">按姓名搜索</label>
+                        <input type="text" class="form-control" id="searchMemberName" placeholder="输入姓名">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filterMemberLevel" class="form-label">按级别筛选</label>
+                        <select class="form-select" id="filterMemberLevel">
+                            <option value="">全部级别</option>
+                            <option value="会员">会员</option>
+                            <option value="区代">区代</option>
+                            <option value="市代">市代</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button id="searchMemberBtn" class="btn btn-primary w-100 me-2">🔍 搜索</button>
+                        <button id="clearSearchBtn" class="btn btn-secondary w-100">🔄 清空</button>
+                    </div>
+                </div>
+                
+                <!-- 搜索结果/会员树形结构 -->
+                <div id="searchResults" class="search-results" style="display: none;">
+                    <h6>搜索结果 / 会员结构</h6>
+                    <div id="memberTree" class="member-tree"></div>
+                </div>
+            </div>
+
             <div class="card mb-4">
                 <div class="card-header">➕ 添加会员</div>
                 <div class="card-body">
@@ -913,6 +1041,11 @@
             
             let baseTime = new Date($('#baseTime').text());
             
+            // 性能优化：缓存机制
+            let teamOrdersCache = {};
+            let upperAgentsCache = {};
+            let teamHierarchyCache = {};
+            
             // 显示消息函数
             function showSuccessMessage(message) {
                 $('#successMessage').text(message);
@@ -924,6 +1057,33 @@
                 $('#errorMessage').text(message);
                 const toast = new bootstrap.Toast(document.getElementById('errorToast'));
                 toast.show();
+            }
+            
+            // 加载动画控制
+            function showLoading(text = '正在处理，请稍候...') {
+                $('#loadingText').text(text);
+                $('#loadingOverlay').show();
+            }
+            
+            function updateLoading(progress, text) {
+                if (progress !== undefined) {
+                    $('#progressBar').css('width', progress + '%');
+                }
+                if (text) {
+                    $('#loadingText').text(text);
+                }
+            }
+            
+            function hideLoading() {
+                $('#loadingOverlay').hide();
+                $('#progressBar').css('width', '0%');
+            }
+            
+            // 清空缓存
+            function clearCache() {
+                teamOrdersCache = {};
+                upperAgentsCache = {};
+                teamHierarchyCache = {};
             }
             
             // 日期格式化
@@ -956,7 +1116,7 @@
                 return Math.max(...arr.map(item => item.id || 0));
             }
             
-            // 重新计算直推数量
+            // 重新计算直推数量（优化版）
             function recalculateDirectPush() {
                 let members = JSON.parse(localStorage.getItem('members')) || [];
                 
@@ -965,10 +1125,16 @@
                     member.directPush = 0;
                 });
                 
+                // 使用Map提高性能
+                let memberMap = new Map();
+                members.forEach(member => {
+                    memberMap.set(member.id, member);
+                });
+                
                 // 计算直推数量
                 members.forEach(member => {
                     if (member.referrer) {
-                        let referrer = members.find(m => m.id === member.referrer);
+                        let referrer = memberMap.get(member.referrer);
                         if (referrer) {
                             referrer.directPush = (referrer.directPush || 0) + 1;
                         }
@@ -976,10 +1142,11 @@
                 });
                 
                 localStorage.setItem('members', JSON.stringify(members));
+                clearCache(); // 清空缓存
                 return members;
             }
             
-            // 检查区代资格
+            // 检查区代资格（优化版）
             function checkAreaAgentQualification(memberId) {
                 let members = JSON.parse(localStorage.getItem('members')) || [];
                 let member = members.find(m => m.id === memberId);
@@ -990,18 +1157,20 @@
                 let directMembers = members.filter(m => m.referrer === memberId && !m.isEmptyAccount);
                 if (directMembers.length < 3) return false;
                 
-                let top3DirectMembers = directMembers.sort((a, b) => a.id - b.id).slice(0, 3);
+                // 取前3个直属会员
+                let top3DirectMembers = directMembers.slice(0, 3);
                 let totalOrdersFrom3Markets = 0;
                 
+                // 使用缓存获取团队订单
                 top3DirectMembers.forEach(directMember => {
-                    let teamOrders = getTeamOrders(directMember.id);
+                    let teamOrders = getTeamOrdersOptimized(directMember.id);
                     totalOrdersFrom3Markets += teamOrders.length;
                 });
                 
                 return totalOrdersFrom3Markets >= 5;
             }
             
-            // 检查市代资格
+            // 检查市代资格（优化版）
             function checkCityAgentQualification(memberId) {
                 let members = JSON.parse(localStorage.getItem('members')) || [];
                 let member = members.find(m => m.id === memberId);
@@ -1014,42 +1183,59 @@
                 let areaAgentsInDirect = directMembers.filter(m => m.level === '区代');
                 if (areaAgentsInDirect.length < 3) return false;
                 
-                let teamPerformance = getTeamOrders(memberId).length * ORDER_PRICE;
+                let teamPerformance = getTeamOrdersOptimized(memberId).length * ORDER_PRICE;
                 return teamPerformance >= 100000;
             }
             
-            // 获取团队订单
-            function getTeamOrders(memberId) {
+            // 获取团队订单（优化版 - 使用迭代代替递归）
+            function getTeamOrdersOptimized(memberId) {
+                // 检查缓存
+                if (teamOrdersCache[memberId]) {
+                    return teamOrdersCache[memberId];
+                }
+                
                 let members = JSON.parse(localStorage.getItem('members')) || [];
                 let orders = JSON.parse(localStorage.getItem('orders')) || [];
                 
-                function getTeamMemberIds(id) {
-                    let ids = [id];
-                    let directMembers = members.filter(m => m.referrer === id && !m.isEmptyAccount);
-                    directMembers.forEach(m => {
-                        ids = ids.concat(getTeamMemberIds(m.id));
-                    });
-                    return ids;
+                // 使用迭代算法代替递归
+                let teamMemberIds = new Set([memberId]);
+                let queue = [memberId];
+                
+                while (queue.length > 0) {
+                    let currentId = queue.shift();
+                    // 使用filter查找直属会员（比find性能更好）
+                    for (let i = 0; i < members.length; i++) {
+                        let m = members[i];
+                        if (m.referrer === currentId && !m.isEmptyAccount && !teamMemberIds.has(m.id)) {
+                            teamMemberIds.add(m.id);
+                            queue.push(m.id);
+                        }
+                    }
                 }
                 
-                let teamMemberIds = getTeamMemberIds(memberId);
-                return orders.filter(o => teamMemberIds.includes(o.memberId));
+                // 过滤订单
+                let teamOrders = orders.filter(o => teamMemberIds.has(o.memberId));
+                
+                // 缓存结果
+                teamOrdersCache[memberId] = teamOrders;
+                return teamOrders;
             }
             
             // 计算累计业绩
             function calculateTotalPerformance(memberId) {
-                let orders = JSON.parse(localStorage.getItem('orders')) || [];
-                let teamOrders = getTeamOrders(memberId);
+                let teamOrders = getTeamOrdersOptimized(memberId);
                 return teamOrders.length * ORDER_PRICE;
             }
             
-            // 同步奖励到会员
+            // 同步奖励到会员（优化版）
             function syncRewardsToMembers() {
                 let members = JSON.parse(localStorage.getItem('members')) || [];
                 let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
                 
-                // 初始化会员奖励字段
+                // 创建会员映射以快速查找
+                let memberMap = new Map();
                 members.forEach(member => {
+                    // 初始化字段
                     member.systemReward = 0;
                     member.directReward = 0;
                     member.areaReward = 0;
@@ -1058,12 +1244,12 @@
                     member.greenPoints = 0;
                     member.redPoints = 0;
                     member.totalIncome = 0;
-                    member.orderCount = 0;
+                    memberMap.set(member.id, member);
                 });
                 
                 // 累加奖励
                 rewards.forEach(reward => {
-                    let member = members.find(m => m.id === reward.memberId);
+                    let member = memberMap.get(reward.memberId);
                     if (member) {
                         switch (reward.type) {
                             case '系统奖励':
@@ -1092,6 +1278,7 @@
                 // 更新订单数量
                 let orders = JSON.parse(localStorage.getItem('orders')) || [];
                 members.forEach(member => {
+                    // 使用filter计数
                     member.orderCount = orders.filter(o => o.memberId === member.id).length;
                     member.totalPerformance = calculateTotalPerformance(member.id);
                 });
@@ -1121,6 +1308,7 @@
                 
                 if (upgraded) {
                     localStorage.setItem('members', JSON.stringify(members));
+                    clearCache(); // 清空缓存
                 }
                 
                 return members;
@@ -1131,7 +1319,7 @@
                 return ORDER_PRICE * 0.05;
             }
             
-            // 计算区代奖
+            // 计算区代奖（优化版，考虑每日封顶1000元，包括直推奖、平级奖、区代奖）
             function calculateAreaReward(memberId, rewardDate) {
                 let members = JSON.parse(localStorage.getItem('members')) || [];
                 let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
@@ -1139,41 +1327,25 @@
                 
                 if (!member || member.level !== '区代' || member.isEmptyAccount) return 0;
                 
-                let todayRewards = rewards.filter(r => 
-                    r.memberId === memberId && 
-                    r.type === '区代奖' && 
-                    r.rewardTime === rewardDate
-                );
-                let todayTotal = todayRewards.reduce((sum, r) => sum + r.amount, 0);
+                // 计算该区代当日已获得的所有奖励（直推奖+平级奖+区代奖）总和
+                let todayTotal = rewards
+                    .filter(r => r.memberId === memberId && 
+                                r.rewardTime === rewardDate &&
+                                ['直推奖', '平级奖', '区代奖'].includes(r.type))
+                    .reduce((sum, r) => sum + r.amount, 0);
                 
-                let reward = ORDER_PRICE * 0.05;
+                // 区代奖金额（0.5%的订单金额）
+                let areaRewardAmount = ORDER_PRICE * 0.005; // 修正为0.5%
+                
+                // 计算剩余额度
                 let remaining = AREA_AGENT_DAILY_CAP - todayTotal;
                 
-                return remaining > 0 ? Math.min(reward, remaining) : 0;
+                return remaining > 0 ? Math.min(areaRewardAmount, remaining) : 0;
             }
             
             // 计算市代奖
             function calculateCityReward() {
                 return ORDER_PRICE * 0.03;
-            }
-            
-            // 计算平级奖
-            function calculatePeerReward(areaAgentId) {
-                let members = JSON.parse(localStorage.getItem('members')) || [];
-                let member = members.find(m => m.id === areaAgentId);
-                
-                if (!member || member.isEmptyAccount) return 0;
-                
-                let referrerId = member.referrer;
-                while (referrerId) {
-                    let referrer = members.find(m => m.id === referrerId);
-                    if (referrer && referrer.level === '区代' && !referrer.isEmptyAccount) {
-                        return ORDER_PRICE * 0.05;
-                    }
-                    referrerId = referrer ? referrer.referrer : '';
-                }
-                
-                return 0;
             }
             
             // 分配积分
@@ -1184,7 +1356,7 @@
                 };
             }
             
-            // 添加奖励记录
+            // 添加奖励记录（优化版）
             function addRewardRecord(memberId, memberName, rewardType, rewardAmount, rewardTime, targetMemberId = '') {
                 if (rewardAmount <= 0) return null;
                 
@@ -1241,7 +1413,6 @@
                 
                 localStorage.setItem('orders', JSON.stringify(orders));
                 refreshAllTables();
-                refreshStatistics();
                 
                 if (rewardCount > 0) {
                     showSuccessMessage(`已为 ${rewardCount} 个订单发放16天奖励，每单200元！`);
@@ -1328,7 +1499,7 @@
                 }
             }
             
-            // 加载会员表格
+            // 加载会员表格（优化版）
             function loadMemberTable() {
                 let members = JSON.parse(localStorage.getItem('members')) || [];
                 let tbody = $('#memberTableBody');
@@ -1339,7 +1510,11 @@
                     return;
                 }
                 
-                members.sort((a, b) => a.id - b.id);
+                // 修改：按ID倒序排列，让最新添加的显示在最上面
+                members.sort((a, b) => b.id - a.id);
+                
+                // 使用文档片段提高性能
+                let fragment = document.createDocumentFragment();
                 
                 members.forEach(member => {
                     // 确保所有字段都有值
@@ -1372,38 +1547,51 @@
                         greenPointsCell = `<span class="green-points-warning">${greenPointsCell}</span>`;
                     }
                     
-                    tbody.append(`
-                        <tr>
-                            <td>${member.id}</td>
-                            <td>${member.name}</td>
-                            <td>${member.referrer || '-'}</td>
-                            <td>${member.contactPerson || '-'}</td>
-                            <td>${member.directPush}</td>
-                            <td class="${levelClass}">${member.level}</td>
-                            <td>${member.repurchaseTimes}</td>
-                            <td>${isReinvestText}</td>
-                            <td>${member.totalPerformance.toLocaleString()}</td>
-                            <td>${parseFloat(member.systemReward).toFixed(2)}</td>
-                            <td>${parseFloat(member.directReward).toFixed(2)}</td>
-                            <td>${parseFloat(member.areaReward).toFixed(2)}</td>
-                            <td>${parseFloat(member.peerReward).toFixed(2)}</td>
-                            <td>${parseFloat(member.cityReward).toFixed(2)}</td>
-                            <td>${greenPointsCell}</td>
-                            <td>${parseFloat(member.redPoints).toFixed(2)}</td>
-                            <td>${totalIncome}</td>
-                            <td>${member.registerTime}</td>
-                            <td>${isEmptyAccountText}</td>
-                            <td class="operation-btn">
-                                <button class="btn btn-sm btn-warning edit-member" data-id="${member.id}">编辑</button>
-                                <button class="btn btn-sm btn-danger delete-member" data-id="${member.id}">删除</button>
-                                <button class="btn btn-sm btn-success quick-order" data-id="${member.id}" data-name="${member.name}">快速下单</button>
-                            </td>
-                        </tr>
-                    `);
+                    let row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <span class="member-link" data-id="${member.id}" style="cursor: pointer; color: #0d6efd; text-decoration: underline;">
+                                ${member.id}
+                            </span>
+                        </td>
+                        <td>${member.name}</td>
+                        <td>
+                            ${member.referrer ? 
+                                `<span class="member-link" data-id="${member.referrer}" style="cursor: pointer; color: #0d6efd; text-decoration: underline;">
+                                    ${member.referrer}
+                                </span>` : 
+                                '-'
+                            }
+                        </td>
+                        <td>${member.contactPerson || '-'}</td>
+                        <td>${member.directPush}</td>
+                        <td class="${levelClass}">${member.level}</td>
+                        <td>${member.repurchaseTimes}</td>
+                        <td>${isReinvestText}</td>
+                        <td>${member.totalPerformance.toLocaleString()}</td>
+                        <td>${parseFloat(member.systemReward).toFixed(2)}</td>
+                        <td>${parseFloat(member.directReward).toFixed(2)}</td>
+                        <td>${parseFloat(member.areaReward).toFixed(2)}</td>
+                        <td>${parseFloat(member.peerReward).toFixed(2)}</td>
+                        <td>${parseFloat(member.cityReward).toFixed(2)}</td>
+                        <td>${greenPointsCell}</td>
+                        <td>${parseFloat(member.redPoints).toFixed(2)}</td>
+                        <td>${totalIncome}</td>
+                        <td>${member.registerTime}</td>
+                        <td>${isEmptyAccountText}</td>
+                        <td class="operation-btn">
+                            <button class="btn btn-sm btn-warning edit-member" data-id="${member.id}">编辑</button>
+                            <button class="btn btn-sm btn-danger delete-member" data-id="${member.id}">删除</button>
+                            <button class="btn btn-sm btn-success quick-order" data-id="${member.id}" data-name="${member.name}">快速下单</button>
+                        </td>
+                    `;
+                    fragment.appendChild(row);
                 });
+                
+                tbody.append(fragment);
             }
             
-            // 加载订单表格
+            // 加载订单表格（优化版）
             function loadOrderTable() {
                 let orders = JSON.parse(localStorage.getItem('orders')) || [];
                 let tbody = $('#orderTableBody');
@@ -1414,31 +1602,44 @@
                     return;
                 }
                 
+                // 修改：按ID倒序排列，让最新添加的显示在最上面
+                orders.sort((a, b) => b.id - a.id);
+                
+                // 使用文档片段提高性能
+                let fragment = document.createDocumentFragment();
+                
                 orders.forEach(order => {
                     let rewardStatus = order.day16RewardStatus || '未到时间';
                     if (order.type === '复购订单') rewardStatus = '无';
                     
-                    tbody.append(`
-                        <tr>
-                            <td>${order.id}</td>
-                            <td>${order.memberId}</td>
-                            <td>${order.name}</td>
-                            <td>${order.amount.toFixed(2)}</td>
-                            <td>${order.type}</td>
-                            <td>${order.orderNo}</td>
-                            <td>${order.orderTime}</td>
-                            <td>
-                                ${rewardStatus === '已发放' ? '<span class="badge bg-success">已发放</span>' : 
-                                  rewardStatus === '未到时间' ? '<span class="badge bg-warning">未到时间</span>' : 
-                                  '<span class="badge bg-secondary">无</span>'}
-                            </td>
-                            <td class="operation-btn">
-                                <button class="btn btn-sm btn-warning edit-order" data-id="${order.id}">编辑</button>
-                                <button class="btn btn-sm btn-danger delete-order" data-id="${order.id}">删除</button>
-                            </td>
-                        </tr>
-                    `);
+                    let statusBadge = '';
+                    if (rewardStatus === '已发放') {
+                        statusBadge = '<span class="badge bg-success">已发放</span>';
+                    } else if (rewardStatus === '未到时间') {
+                        statusBadge = '<span class="badge bg-warning">未到时间</span>';
+                    } else {
+                        statusBadge = '<span class="badge bg-secondary">无</span>';
+                    }
+                    
+                    let row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${order.id}</td>
+                        <td>${order.memberId}</td>
+                        <td>${order.name}</td>
+                        <td>${order.amount.toFixed(2)}</td>
+                        <td>${order.type}</td>
+                        <td>${order.orderNo}</td>
+                        <td>${order.orderTime}</td>
+                        <td>${statusBadge}</td>
+                        <td class="operation-btn">
+                            <button class="btn btn-sm btn-warning edit-order" data-id="${order.id}">编辑</button>
+                            <button class="btn btn-sm btn-danger delete-order" data-id="${order.id}">删除</button>
+                        </td>
+                    `;
+                    fragment.appendChild(row);
                 });
+                
+                tbody.append(fragment);
             }
             
             // 加载奖励表格
@@ -1456,29 +1657,40 @@
                     return;
                 }
                 
+                // 修改：按ID倒序排列，让最新添加的显示在最上面
+                rewards.sort((a, b) => b.id - a.id);
+                
+                // 使用文档片段提高性能
+                let fragment = document.createDocumentFragment();
+                
                 rewards.forEach(reward => {
-                    tbody.append(`
-                        <tr>
-                            <td>${reward.id}</td>
-                            <td>${reward.memberId}</td>
-                            <td>${reward.name}</td>
-                            <td>${reward.type}</td>
-                            <td>${reward.amount.toFixed(2)}</td>
-                            <td>${reward.greenPoints.toFixed(2)}</td>
-                            <td>${reward.redPoints.toFixed(2)}</td>
-                            <td>${reward.rewardTime}</td>
-                            <td>${reward.targetMemberId || '-'}</td>
-                            <td class="operation-btn">
-                                <button class="btn btn-sm btn-warning edit-reward" data-id="${reward.id}">编辑</button>
-                                <button class="btn btn-sm btn-danger delete-reward" data-id="${reward.id}">删除</button>
-                            </td>
-                        </tr>
-                    `);
+                    let row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${reward.id}</td>
+                        <td>${reward.memberId}</td>
+                        <td>${reward.name}</td>
+                        <td>${reward.type}</td>
+                        <td>${reward.amount.toFixed(2)}</td>
+                        <td>${reward.greenPoints.toFixed(2)}</td>
+                        <td>${reward.redPoints.toFixed(2)}</td>
+                        <td>${reward.rewardTime}</td>
+                        <td>${reward.targetMemberId || '-'}</td>
+                        <td class="operation-btn">
+                            <button class="btn btn-sm btn-warning edit-reward" data-id="${reward.id}">编辑</button>
+                            <button class="btn btn-sm btn-danger delete-reward" data-id="${reward.id}">删除</button>
+                        </td>
+                    `;
+                    fragment.appendChild(row);
                 });
+                
+                tbody.append(fragment);
             }
             
-            // 刷新所有表格
+            // 刷新所有表格（优化版）
             function refreshAllTables() {
+                // 清空缓存
+                clearCache();
+                
                 recalculateDirectPush();
                 syncRewardsToMembers();
                 autoUpgradeAllMembers();
@@ -1819,7 +2031,528 @@
                 URL.revokeObjectURL(url);
             }
             
-            // 事件绑定
+            // ================ 优化后的计算函数 ================
+            
+            // 获取上级区代（优化版 - 避免递归）
+            function getUpperAreaAgentsOptimized(memberId) {
+                const cacheKey = `area_${memberId}`;
+                if (upperAgentsCache[cacheKey]) {
+                    return upperAgentsCache[cacheKey];
+                }
+                
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let agentIds = new Set();
+                
+                // 向上查找区代
+                let currentId = memberId;
+                let visited = new Set();
+                
+                while (currentId) {
+                    if (visited.has(currentId)) break;
+                    visited.add(currentId);
+                    
+                    let member = members.find(m => m.id === currentId);
+                    if (!member || !member.referrer) break;
+                    
+                    let referrerId = member.referrer;
+                    let referrer = members.find(m => m.id === referrerId);
+                    
+                    if (referrer && referrer.level === '区代' && !referrer.isEmptyAccount) {
+                        agentIds.add(referrerId);
+                    }
+                    
+                    currentId = referrerId;
+                }
+                
+                let result = Array.from(agentIds);
+                upperAgentsCache[cacheKey] = result;
+                return result;
+            }
+            
+            // 获取上级市代（优化版）
+            function getUpperCityAgentsOptimized(memberId) {
+                const cacheKey = `city_${memberId}`;
+                if (upperAgentsCache[cacheKey]) {
+                    return upperAgentsCache[cacheKey];
+                }
+                
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let agentIds = new Set();
+                
+                // 向上查找市代
+                let currentId = memberId;
+                let visited = new Set();
+                
+                while (currentId) {
+                    if (visited.has(currentId)) break;
+                    visited.add(currentId);
+                    
+                    let member = members.find(m => m.id === currentId);
+                    if (!member || !member.referrer) break;
+                    
+                    let referrerId = member.referrer;
+                    let referrer = members.find(m => m.id === referrerId);
+                    
+                    if (referrer && referrer.level === '市代' && !referrer.isEmptyAccount) {
+                        agentIds.add(referrerId);
+                    }
+                    
+                    currentId = referrerId;
+                }
+                
+                let result = Array.from(agentIds);
+                upperAgentsCache[cacheKey] = result;
+                return result;
+            }
+            
+            // 获取上级区代（用于平级奖 - 优化版）
+            function getUpperAreaAgentForPeerRewardOptimized(memberId) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let member = members.find(m => m.id === memberId);
+                if (!member) return null;
+                
+                let referrerId = member.referrer;
+                let visited = new Set();
+                
+                while (referrerId) {
+                    if (visited.has(referrerId)) break;
+                    visited.add(referrerId);
+                    
+                    let referrer = members.find(m => m.id === referrerId);
+                    if (referrer && referrer.level === '区代' && !referrer.isEmptyAccount) {
+                        return referrerId;
+                    }
+                    referrerId = referrer ? referrer.referrer : null;
+                }
+                
+                return null;
+            }
+            
+            // ================ 搜索功能 ================
+            
+            // 搜索会员函数
+            function searchMembers() {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let searchId = $('#searchMemberId').val().trim();
+                let searchName = $('#searchMemberName').val().trim();
+                let filterLevel = $('#filterMemberLevel').val();
+                
+                // 清空之前的搜索结果
+                $('#searchResults').hide();
+                $('#memberTree').empty();
+                
+                // 如果没有搜索条件，显示所有会员
+                if (!searchId && !searchName && !filterLevel) {
+                    loadMemberTable();
+                    return;
+                }
+                
+                // 筛选会员
+                let filteredMembers = members.filter(member => {
+                    if (searchId && member.id !== parseInt(searchId)) return false;
+                    if (searchName && !member.name.includes(searchName)) return false;
+                    if (filterLevel && member.level !== filterLevel) return false;
+                    return true;
+                });
+                
+                if (filteredMembers.length === 0) {
+                    $('#memberTree').html('<div class="text-center py-4">未找到符合条件的会员</div>');
+                    $('#searchResults').show();
+                    return;
+                }
+                
+                // 如果只搜索一个会员，显示该会员的下线结构
+                if (searchId && !searchName && !filterLevel) {
+                    let memberId = parseInt(searchId);
+                    displayMemberTree(memberId);
+                } else {
+                    // 显示搜索结果列表
+                    displaySearchResults(filteredMembers);
+                }
+                
+                $('#searchResults').show();
+            }
+            
+            // 显示搜索结果列表
+            function displaySearchResults(members) {
+                let treeHtml = '<div class="mb-3"><strong>找到 ' + members.length + ' 个会员：</strong></div>';
+                
+                members.forEach(member => {
+                    let levelClass = '';
+                    if (member.level === '区代') levelClass = 'level-area';
+                    if (member.level === '市代') levelClass = 'level-city';
+                    
+                    treeHtml += `
+                        <div class="tree-node level-1">
+                            <span class="member-link" data-id="${member.id}">
+                                ID: ${member.id} | 姓名: ${member.name} | 级别: <span class="${levelClass}">${member.level}</span>
+                            </span>
+                            <button class="btn btn-sm btn-info float-end view-subordinates" data-id="${member.id}">查看下线</button>
+                        </div>
+                    `;
+                });
+                
+                $('#memberTree').html(treeHtml);
+            }
+            
+            // 显示会员树形结构（下线会员）
+            function displayMemberTree(rootMemberId) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let rootMember = members.find(m => m.id === rootMemberId);
+                
+                if (!rootMember) {
+                    $('#memberTree').html('<div class="text-center py-4">会员不存在</div>');
+                    return;
+                }
+                
+                // 构建树形结构
+                let treeHtml = `
+                    <div class="mb-3">
+                        <strong>会员结构树 (根节点: ${rootMember.name} ID:${rootMember.id})</strong>
+                        <button class="btn btn-sm btn-outline-secondary float-end" id="collapseAllBtn">折叠全部</button>
+                        <button class="btn btn-sm btn-outline-secondary float-end me-2" id="expandAllBtn">展开全部</button>
+                    </div>
+                `;
+                
+                // 递归函数构建树
+                function buildTree(memberId, level) {
+                    let member = members.find(m => m.id === memberId);
+                    if (!member) return '';
+                    
+                    let levelClass = `level-${Math.min(level, 5)}`;
+                    let memberLevelClass = '';
+                    if (member.level === '区代') memberLevelClass = 'level-area';
+                    if (member.level === '市代') memberLevelClass = 'level-city';
+                    
+                    // 获取直推会员
+                    let directMembers = members.filter(m => m.referrer === memberId);
+                    
+                    let html = `
+                        <div class="tree-node ${levelClass}">
+                            <span class="member-link" data-id="${member.id}">
+                                ${member.id} | ${member.name} | 
+                                <span class="${memberLevelClass}">${member.level}</span> | 
+                                直推: ${directMembers.length}
+                            </span>
+                    `;
+                    
+                    if (directMembers.length > 0) {
+                        html += `<button class="btn btn-sm btn-outline-primary float-end toggle-btn" data-id="${member.id}">展开</button>`;
+                        html += `<div id="subtree-${member.id}" class="subtree" style="display: none;">`;
+                        directMembers.forEach(subMember => {
+                            html += buildTree(subMember.id, level + 1);
+                        });
+                        html += '</div>';
+                    }
+                    
+                    html += '</div>';
+                    return html;
+                }
+                
+                treeHtml += buildTree(rootMemberId, 1);
+                $('#memberTree').html(treeHtml);
+                
+                // 添加切换按钮事件
+                $('.toggle-btn').click(function() {
+                    let memberId = $(this).data('id');
+                    let subtree = $('#subtree-' + memberId);
+                    if (subtree.is(':visible')) {
+                        subtree.hide();
+                        $(this).text('展开');
+                    } else {
+                        subtree.show();
+                        $(this).text('折叠');
+                    }
+                });
+                
+                // 展开全部按钮
+                $('#expandAllBtn').click(function() {
+                    $('.subtree').show();
+                    $('.toggle-btn').text('折叠');
+                });
+                
+                // 折叠全部按钮
+                $('#collapseAllBtn').click(function() {
+                    $('.subtree').hide();
+                    $('.toggle-btn').text('展开');
+                });
+            }
+            
+            // ================ 优化后的下单函数 ================
+            
+            // 为会员快速下单
+            $(document).on('click', '.quick-order', async function() {
+                let memberId = $(this).data('id');
+                let memberName = $(this).data('name');
+                
+                if (!memberId) {
+                    showErrorMessage('会员ID不能为空！');
+                    return;
+                }
+                
+                if (confirm(`确定要为会员【${memberName}】(ID:${memberId})快速下单吗？`)) {
+                    showLoading('开始创建订单...');
+                    updateLoading(10, '验证会员信息...');
+                    
+                    try {
+                        // 使用setTimeout分解任务，避免阻塞UI
+                        setTimeout(async () => {
+                            await createQuickOrderOptimized(memberId, memberName);
+                        }, 100);
+                    } catch (error) {
+                        showErrorMessage('下单失败：' + error.message);
+                        console.error(error);
+                        hideLoading();
+                    }
+                }
+            });
+            
+            // 优化后的快速下单函数
+            async function createQuickOrderOptimized(memberId, memberName) {
+                updateLoading(20, '读取数据...');
+                
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                
+                // 验证会员
+                let member = members.find(m => m.id === memberId);
+                if (!member) {
+                    hideLoading();
+                    showErrorMessage('会员不存在！');
+                    return;
+                }
+                
+                updateLoading(30, '创建订单记录...');
+                
+                let orderId = getMaxId(orders) + 1;
+                let orderNo = 'LG' + formatDateForOrderNo(new Date()) + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+                let orderType = '普通订单';
+                let orderTime = formatDate(baseTime);
+                
+                let newOrder = {
+                    id: orderId,
+                    memberId: memberId,
+                    name: memberName,
+                    amount: ORDER_PRICE,
+                    type: orderType,
+                    orderNo: orderNo,
+                    orderTime: orderTime,
+                    day16RewardStatus: '未到时间'
+                };
+                
+                orders.push(newOrder);
+                localStorage.setItem('orders', JSON.stringify(orders));
+                
+                updateLoading(40, '更新会员状态...');
+                
+                // 更新会员状态（不再是空号）
+                member.isEmptyAccount = false;
+                member.orderCount = (member.orderCount || 0) + 1;
+                localStorage.setItem('members', JSON.stringify(members));
+                
+                updateLoading(50, '计算奖励...');
+                
+                // 异步计算奖励
+                await calculateOrderRewardsOptimized(memberId, orderTime, memberName);
+                
+                updateLoading(80, '刷新界面...');
+                
+                // 注释掉这行，不切换到订单标签页（修改点3）
+                // $('button[data-bs-target="#order"]').tab('show');
+                
+                // 使用setTimeout延迟刷新，让UI有机会更新
+                setTimeout(() => {
+                    refreshAllTables();
+                    updateLoading(100, '下单完成！');
+                    
+                    setTimeout(() => {
+                        hideLoading();
+                        showSuccessMessage(`为会员【${memberName}】快速下单成功！订单编号：${newOrder.orderNo}`);
+                    }, 500);
+                }, 300);
+            }
+            
+            // 优化后的计算订单奖励函数
+            async function calculateOrderRewardsOptimized(memberId, orderTime, memberName) {
+                return new Promise((resolve) => {
+                    // 分解任务，避免长时间阻塞
+                    setTimeout(() => {
+                        updateLoading(55, '计算直推奖...');
+                        calculateDirectRewards(memberId, orderTime);
+                        
+                        setTimeout(() => {
+                            updateLoading(60, '计算区代奖...');
+                            calculateAreaRewards(memberId, orderTime);
+                            
+                            setTimeout(() => {
+                                updateLoading(65, '计算平级奖...');
+                                calculatePeerRewards(memberId, orderTime);
+                                
+                                setTimeout(() => {
+                                    updateLoading(70, '计算市代奖...');
+                                    calculateCityRewards(memberId, orderTime);
+                                    
+                                    setTimeout(() => {
+                                        updateLoading(75, '检查自动复购...');
+                                        checkAutoRepurchase(memberId);
+                                        resolve();
+                                    }, 100);
+                                }, 100);
+                            }, 100);
+                        }, 100);
+                    }, 100);
+                });
+            }
+            
+            // 分解的计算函数
+            function calculateDirectRewards(memberId, orderTime) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                let member = members.find(m => m.id === memberId);
+                if (!member) return;
+                
+                // 直推奖（给推荐人）
+                if (member.referrer) {
+                    let referrer = members.find(m => m.id === member.referrer);
+                    if (referrer && !referrer.isEmptyAccount) {
+                        let directRewardAmount = calculateDirectReward(); // 5%的订单金额
+                        
+                        // 如果推荐人是区代，需要考虑每日封顶
+                        if (referrer.level === '区代') {
+                            // 计算该区代当日已获得的所有奖励（直推奖+平级奖+区代奖）总和
+                            let todayTotal = rewards
+                                .filter(r => r.memberId === referrer.id && 
+                                            r.rewardTime === orderTime &&
+                                            ['直推奖', '平级奖', '区代奖'].includes(r.type))
+                                .reduce((sum, r) => sum + r.amount, 0);
+                            
+                            // 计算剩余额度
+                            let remaining = AREA_AGENT_DAILY_CAP - todayTotal;
+                            
+                            if (remaining > 0) {
+                                let actualReward = Math.min(directRewardAmount, remaining);
+                                addRewardRecord(
+                                    referrer.id,
+                                    referrer.name,
+                                    '直推奖',
+                                    actualReward,
+                                    orderTime,
+                                    memberId
+                                );
+                            }
+                        } else {
+                            // 非区代，正常发放
+                            addRewardRecord(
+                                referrer.id,
+                                referrer.name,
+                                '直推奖',
+                                directRewardAmount,
+                                orderTime,
+                                memberId
+                            );
+                        }
+                    }
+                }
+            }
+            
+            function calculateAreaRewards(memberId, orderTime) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                
+                // 区代奖和平级奖
+                let areaAgents = getUpperAreaAgentsOptimized(memberId);
+                areaAgents.forEach(agentId => {
+                    let agent = members.find(m => m.id === agentId);
+                    if (agent && !agent.isEmptyAccount && agent.level === '区代') {
+                        let areaReward = calculateAreaReward(agentId, orderTime);
+                        if (areaReward > 0) {
+                            addRewardRecord(
+                                agentId,
+                                agent.name,
+                                '区代奖',
+                                areaReward,
+                                orderTime,
+                                memberId
+                            );
+                        }
+                    }
+                });
+            }
+            
+            function calculatePeerRewards(memberId, orderTime) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                
+                // 平级奖（修改点1：平级奖是下面区代的区代奖的100%）
+                let areaAgents = getUpperAreaAgentsOptimized(memberId);
+                areaAgents.forEach(agentId => {
+                    let agent = members.find(m => m.id === agentId);
+                    if (agent && !agent.isEmptyAccount && agent.level === '区代') {
+                        // 获取上级区代（平级奖的发放对象）
+                        let upperAreaAgentId = getUpperAreaAgentForPeerRewardOptimized(agentId);
+                        if (upperAreaAgentId) {
+                            let upperAgent = members.find(m => m.id === upperAreaAgentId);
+                            if (upperAgent && upperAgent.level === '区代' && !upperAgent.isEmptyAccount) {
+                                // 计算该区代（agent）当天已经获得的区代奖总额
+                                let areaRewardToday = rewards
+                                    .filter(r => r.memberId === agentId && 
+                                                r.rewardTime === orderTime &&
+                                                r.type === '区代奖')
+                                    .reduce((sum, r) => sum + r.amount, 0);
+                                
+                                // 平级奖 = 区代奖的100%
+                                let peerRewardAmount = areaRewardToday;
+                                
+                                // 计算上级区代当日已获得的所有奖励（直推奖+平级奖+区代奖）总和
+                                let todayTotal = rewards
+                                    .filter(r => r.memberId === upperAreaAgentId && 
+                                                r.rewardTime === orderTime &&
+                                                ['直推奖', '平级奖', '区代奖'].includes(r.type))
+                                    .reduce((sum, r) => sum + r.amount, 0);
+                                
+                                // 计算剩余额度
+                                let remaining = AREA_AGENT_DAILY_CAP - todayTotal;
+                                
+                                if (remaining > 0 && peerRewardAmount > 0) {
+                                    let actualReward = Math.min(peerRewardAmount, remaining);
+                                    addRewardRecord(
+                                        upperAreaAgentId,
+                                        upperAgent.name,
+                                        '平级奖',
+                                        actualReward,
+                                        orderTime,
+                                        agentId
+                                    );
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function calculateCityRewards(memberId, orderTime) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                
+                // 市代奖
+                let cityAgents = getUpperCityAgentsOptimized(memberId);
+                cityAgents.forEach(agentId => {
+                    let agent = members.find(m => m.id === agentId);
+                    if (agent && !agent.isEmptyAccount && agent.level === '市代') {
+                        let cityReward = calculateCityReward();
+                        addRewardRecord(
+                            agentId,
+                            agent.name,
+                            '市代奖',
+                            cityReward,
+                            orderTime,
+                            memberId
+                        );
+                    }
+                });
+            }
+            
+            // ================ 事件绑定 ================
+            
             $('#minusDay').click(function() {
                 baseTime.setDate(baseTime.getDate() - 1);
                 updateBaseTimeDisplay();
@@ -1836,7 +2569,58 @@
             
             $('#createDemoData').click(function() {
                 if (confirm('确定要创建演示数据吗？这将添加13个会员（1推3，3推9结构）和一些订单奖励数据。')) {
-                    createDemoData();
+                    showLoading('正在创建演示数据...');
+                    setTimeout(() => {
+                        createDemoData();
+                        hideLoading();
+                    }, 100);
+                }
+            });
+            
+            // 搜索按钮点击事件
+            $('#searchMemberBtn').click(function() {
+                searchMembers();
+            });
+            
+            // 清空搜索按钮
+            $('#clearSearchBtn').click(function() {
+                $('#searchMemberId').val('');
+                $('#searchMemberName').val('');
+                $('#filterMemberLevel').val('');
+                $('#searchResults').hide();
+                loadMemberTable();
+            });
+            
+            // 点击会员ID查看下线
+            $(document).on('click', '.member-link', function(e) {
+                e.stopPropagation();
+                let memberId = $(this).data('id');
+                if (memberId) {
+                    // 填充搜索框并搜索
+                    $('#searchMemberId').val(memberId);
+                    $('#searchMemberName').val('');
+                    $('#filterMemberLevel').val('');
+                    searchMembers();
+                    
+                    // 切换到会员标签页（如果不在的话）
+                    $('button[data-bs-target="#member"]').tab('show');
+                }
+            });
+            
+            // 查看下线按钮
+            $(document).on('click', '.view-subordinates', function(e) {
+                e.stopPropagation();
+                let memberId = $(this).data('id');
+                $('#searchMemberId').val(memberId);
+                $('#searchMemberName').val('');
+                $('#filterMemberLevel').val('');
+                searchMembers();
+            });
+            
+            // 搜索框回车事件
+            $('#searchMemberId, #searchMemberName').keypress(function(e) {
+                if (e.which === 13) { // Enter键
+                    searchMembers();
                 }
             });
             
@@ -2064,67 +2848,6 @@
                 showSuccessMessage(`会员【${newMember.name}】添加成功！ID：${newMember.id}`);
             });
             
-            // 为会员快速下单（从会员列表）
-            $(document).on('click', '.quick-order', function() {
-                let memberId = $(this).data('id');
-                let memberName = $(this).data('name');
-                
-                if (!memberId) {
-                    showErrorMessage('会员ID不能为空！');
-                    return;
-                }
-                
-                if (confirm(`确定要为会员【${memberName}】(ID:${memberId})快速下单吗？`)) {
-                    createQuickOrder(memberId, memberName);
-                }
-            });
-            
-            // 创建快速订单函数
-            function createQuickOrder(memberId, memberName) {
-                let orders = JSON.parse(localStorage.getItem('orders')) || [];
-                let members = JSON.parse(localStorage.getItem('members')) || [];
-                
-                // 验证会员
-                let member = members.find(m => m.id === memberId);
-                if (!member) {
-                    showErrorMessage('会员不存在！');
-                    return;
-                }
-                
-                let orderId = getMaxId(orders) + 1;
-                let orderNo = 'LG' + formatDateForOrderNo(new Date()) + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-                let orderType = '普通订单';
-                let orderTime = formatDate(baseTime);
-                
-                let newOrder = {
-                    id: orderId,
-                    memberId: memberId,
-                    name: memberName,
-                    amount: ORDER_PRICE,
-                    type: orderType,
-                    orderNo: orderNo,
-                    orderTime: orderTime,
-                    day16RewardStatus: '未到时间'
-                };
-                
-                orders.push(newOrder);
-                localStorage.setItem('orders', JSON.stringify(orders));
-                
-                // 更新会员状态（不再是空号）
-                member.isEmptyAccount = false;
-                member.orderCount = (member.orderCount || 0) + 1;
-                localStorage.setItem('members', JSON.stringify(members));
-                
-                // 计算奖励
-                calculateOrderRewards(memberId, orderTime);
-                
-                // 切换到订单标签页并刷新
-                $('button[data-bs-target="#order"]').tab('show');
-                refreshAllTables();
-                
-                showSuccessMessage(`为会员【${memberName}】快速下单成功！订单编号：${newOrder.orderNo}`);
-            }
-            
             // 添加订单表单提交
             $('#addOrderForm').submit(function(e) {
                 e.preventDefault();
@@ -2178,161 +2901,21 @@
                 localStorage.setItem('members', JSON.stringify(members));
                 
                 // 计算奖励
-                calculateOrderRewards(memberId, orderTime);
-                
-                refreshAllTables();
-                $(this)[0].reset();
-                $('#orderTime').val(formatDate(baseTime));
-                $('#orderAmount').val(ORDER_PRICE);
-                
-                showSuccessMessage(`订单添加成功！订单编号：${newOrder.orderNo}`);
+                showLoading('正在计算奖励...');
+                setTimeout(() => {
+                    calculateOrderRewardsOptimized(memberId, orderTime, memberName);
+                    
+                    setTimeout(() => {
+                        refreshAllTables();
+                        $(this)[0].reset();
+                        $('#orderTime').val(formatDate(baseTime));
+                        $('#orderAmount').val(ORDER_PRICE);
+                        hideLoading();
+                        
+                        showSuccessMessage(`订单添加成功！订单编号：${newOrder.orderNo}`);
+                    }, 500);
+                }, 100);
             });
-            
-            // 计算订单奖励
-            function calculateOrderRewards(memberId, orderTime) {
-                let members = JSON.parse(localStorage.getItem('members')) || [];
-                let member = members.find(m => m.id === memberId);
-                if (!member) return;
-                
-                // 直推奖（给推荐人）
-                if (member.referrer) {
-                    let referrer = members.find(m => m.id === member.referrer);
-                    if (referrer && !referrer.isEmptyAccount) {
-                        let directReward = calculateDirectReward();
-                        addRewardRecord(
-                            referrer.id,
-                            referrer.name,
-                            '直推奖',
-                            directReward,
-                            orderTime,
-                            memberId
-                        );
-                    }
-                }
-                
-                // 区代奖和平级奖
-                let areaAgents = getUpperAreaAgents(memberId);
-                areaAgents.forEach(agentId => {
-                    let agent = members.find(m => m.id === agentId);
-                    if (agent && !agent.isEmptyAccount && agent.level === '区代') {
-                        let areaReward = calculateAreaReward(agentId, orderTime);
-                        if (areaReward > 0) {
-                            addRewardRecord(
-                                agentId,
-                                agent.name,
-                                '区代奖',
-                                areaReward,
-                                orderTime,
-                                memberId
-                            );
-                            
-                            // 平级奖
-                            let upperAreaAgentId = getUpperAreaAgentForPeerReward(agentId);
-                            if (upperAreaAgentId) {
-                                let upperAgent = members.find(m => m.id === upperAreaAgentId);
-                                if (upperAgent && upperAgent.level === '区代' && !upperAgent.isEmptyAccount) {
-                                    addRewardRecord(
-                                        upperAreaAgentId,
-                                        upperAgent.name,
-                                        '平级奖',
-                                        areaReward,
-                                        orderTime,
-                                        agentId
-                                    );
-                                }
-                            }
-                        }
-                    }
-                });
-                
-                // 市代奖
-                let cityAgents = getUpperCityAgents(memberId);
-                cityAgents.forEach(agentId => {
-                    let agent = members.find(m => m.id === agentId);
-                    if (agent && !agent.isEmptyAccount && agent.level === '市代') {
-                        let cityReward = calculateCityReward();
-                        addRewardRecord(
-                            agentId,
-                            agent.name,
-                            '市代奖',
-                            cityReward,
-                            orderTime,
-                            memberId
-                        );
-                    }
-                });
-                
-                // 检查自动复购
-                checkAutoRepurchase(memberId);
-            }
-            
-            // 获取上级区代
-            function getUpperAreaAgents(memberId) {
-                let members = JSON.parse(localStorage.getItem('members')) || [];
-                let agentIds = [];
-                
-                function findUpperAreaAgents(id) {
-                    let member = members.find(m => m.id === id);
-                    if (!member || !member.referrer) return;
-                    
-                    let referrerId = member.referrer;
-                    let referrer = members.find(m => m.id === referrerId);
-                    
-                    if (referrer && referrer.level === '区代' && !referrer.isEmptyAccount) {
-                        if (!agentIds.includes(referrerId)) {
-                            agentIds.push(referrerId);
-                        }
-                    }
-                    
-                    findUpperAreaAgents(referrerId);
-                }
-                
-                findUpperAreaAgents(memberId);
-                return agentIds;
-            }
-            
-            // 获取上级市代
-            function getUpperCityAgents(memberId) {
-                let members = JSON.parse(localStorage.getItem('members')) || [];
-                let agentIds = [];
-                
-                function findUpperCityAgents(id) {
-                    let member = members.find(m => m.id === id);
-                    if (!member || !member.referrer) return;
-                    
-                    let referrerId = member.referrer;
-                    let referrer = members.find(m => m.id === referrerId);
-                    
-                    if (referrer && referrer.level === '市代' && !referrer.isEmptyAccount) {
-                        if (!agentIds.includes(referrerId)) {
-                            agentIds.push(referrerId);
-                        }
-                    }
-                    
-                    findUpperCityAgents(referrerId);
-                }
-                
-                findUpperCityAgents(memberId);
-                return agentIds;
-            }
-            
-            // 获取上级区代（用于平级奖）
-            function getUpperAreaAgentForPeerReward(memberId) {
-                let members = JSON.parse(localStorage.getItem('members')) || [];
-                let member = members.find(m => m.id === memberId);
-                if (!member) return null;
-                
-                let referrerId = member.referrer;
-                while (referrerId) {
-                    let referrer = members.find(m => m.id === referrerId);
-                    if (referrer && referrer.level === '区代' && !referrer.isEmptyAccount) {
-                        return referrerId;
-                    }
-                    referrerId = referrer ? referrer.referrer : null;
-                }
-                
-                return null;
-            }
             
             // 添加奖励表单提交
             $('#addRewardForm').submit(function(e) {
@@ -2434,8 +3017,12 @@
             
             // 生成统计报表
             $('#statisticsBtn').click(function() {
-                refreshStatistics();
-                showSuccessMessage('统计报表已生成！');
+                showLoading('正在生成统计报表...');
+                setTimeout(() => {
+                    refreshStatistics();
+                    hideLoading();
+                    showSuccessMessage('统计报表已生成！');
+                }, 300);
             });
             
             // 导出会员数据
