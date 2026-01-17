@@ -184,6 +184,35 @@
             color: #0b5ed7;
             text-decoration: none;
         }
+        /* 导入订单奖励计算状态 */
+        .import-reward-status {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #0d6efd;
+        }
+        .reward-calc-step {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+        }
+        .reward-calc-step.success {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            border-left: 3px solid #198754;
+        }
+        .reward-calc-step.error {
+            background-color: #f8d7da;
+            color: #842029;
+            border-left: 3px solid #dc3545;
+        }
+        .reward-calc-step.processing {
+            background-color: #cfe2ff;
+            color: #084298;
+            border-left: 3px solid #0d6efd;
+        }
     </style>
 </head>
 <body>
@@ -1335,7 +1364,7 @@
                     .reduce((sum, r) => sum + r.amount, 0);
                 
                 // 区代奖金额（0.5%的订单金额）
-                let areaRewardAmount = ORDER_PRICE * 0.005; // 修正为0.5%
+                let areaRewardAmount = ORDER_PRICE * 0.005;
                 
                 // 计算剩余额度
                 let remaining = AREA_AGENT_DAILY_CAP - todayTotal;
@@ -1510,7 +1539,7 @@
                     return;
                 }
                 
-                // 修改：按ID倒序排列，让最新添加的显示在最上面
+                // 按ID倒序排列，让最新添加的显示在最上面
                 members.sort((a, b) => b.id - a.id);
                 
                 // 使用文档片段提高性能
@@ -1602,7 +1631,7 @@
                     return;
                 }
                 
-                // 修改：按ID倒序排列，让最新添加的显示在最上面
+                // 按ID倒序排列，让最新添加的显示在最上面
                 orders.sort((a, b) => b.id - a.id);
                 
                 // 使用文档片段提高性能
@@ -1657,7 +1686,7 @@
                     return;
                 }
                 
-                // 修改：按ID倒序排列，让最新添加的显示在最上面
+                // 按ID倒序排列，让最新添加的显示在最上面
                 rewards.sort((a, b) => b.id - a.id);
                 
                 // 使用文档片段提高性能
@@ -2017,20 +2046,6 @@
                 });
             }
             
-            // CSV下载函数
-            function downloadCSV(csvContent, fileName) {
-                let blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                let link = document.createElement("a");
-                let url = URL.createObjectURL(blob);
-                link.setAttribute("href", url);
-                link.setAttribute("download", fileName);
-                link.style.display = "none";
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            }
-            
             // ================ 优化后的计算函数 ================
             
             // 获取上级区代（优化版 - 避免递归）
@@ -2356,9 +2371,6 @@
                 await calculateOrderRewardsOptimized(memberId, orderTime, memberName);
                 
                 updateLoading(80, '刷新界面...');
-                
-                // 注释掉这行，不切换到订单标签页（修改点3）
-                // $('button[data-bs-target="#order"]').tab('show');
                 
                 // 使用setTimeout延迟刷新，让UI有机会更新
                 setTimeout(() => {
@@ -3025,6 +3037,365 @@
                 }, 300);
             });
             
+            // ================ 导入订单自动计算奖励功能 ================
+            
+            // 导入订单数据并自动计算奖励
+            $('#importOrderBtn').click(function() {
+                let fileInput = $('#importOrderFile')[0];
+                if (fileInput.files.length === 0) {
+                    showErrorMessage('请选择要导入的CSV文件！');
+                    return;
+                }
+                
+                let file = fileInput.files[0];
+                let reader = new FileReader();
+                
+                reader.onload = async function(e) {
+                    try {
+                        showLoading('正在导入订单数据...');
+                        updateLoading(10, '读取文件内容...');
+                        
+                        let csvContent = e.target.result;
+                        if (csvContent.charCodeAt(0) === 0xFEFF) {
+                            csvContent = csvContent.substring(1);
+                        }
+                        
+                        updateLoading(20, '解析CSV数据...');
+                        let lines = csvContent.split('\n').filter(line => line.trim() !== '');
+                        if (lines.length <= 1) {
+                            hideLoading();
+                            showErrorMessage('CSV文件没有数据！');
+                            return;
+                        }
+                        
+                        // 移除标题行
+                        let headers = lines[0].split(',').map(col => col.trim().replace(/"/g, ''));
+                        lines.shift();
+                        
+                        updateLoading(30, '验证数据格式...');
+                        let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                        let members = JSON.parse(localStorage.getItem('members')) || [];
+                        let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                        
+                        let newOrders = [];
+                        let updatedOrders = [];
+                        let importCount = 0;
+                        let updateCount = 0;
+                        let errorCount = 0;
+                        
+                        updateLoading(40, '处理订单数据...');
+                        // 处理每一行数据
+                        for (let i = 0; i < lines.length; i++) {
+                            if (lines[i].trim() === '') continue;
+                            
+                            try {
+                                // 处理CSV行，考虑引号内的逗号
+                                let columns = parseCSVLine(lines[i]);
+                                
+                                if (columns.length >= 8) {
+                                    let id = parseInt(columns[0]) || 0;
+                                    let memberId = parseInt(columns[1]) || 0;
+                                    let name = columns[2].trim();
+                                    let amount = parseFloat(columns[3]) || ORDER_PRICE;
+                                    let type = columns[4].trim() || '普通订单';
+                                    let orderNo = columns[5].trim();
+                                    let orderTime = columns[6].trim();
+                                    let day16RewardStatus = columns[7].trim() || '未到时间';
+                                    
+                                    // 验证会员是否存在
+                                    let member = members.find(m => m.id === memberId);
+                                    if (!member) {
+                                        errorCount++;
+                                        console.warn(`订单ID ${id}: 会员ID ${memberId} 不存在，跳过此订单`);
+                                        continue;
+                                    }
+                                    
+                                    // 检查订单是否已存在
+                                    let existingIndex = orders.findIndex(o => o.id === id);
+                                    
+                                    let orderData = {
+                                        id: id,
+                                        memberId: memberId,
+                                        name: name,
+                                        amount: amount,
+                                        type: type,
+                                        orderNo: orderNo || ('LG' + orderTime.replace(/-/g, '') + Math.floor(Math.random() * 10000).toString().padStart(4, '0')),
+                                        orderTime: orderTime,
+                                        day16RewardStatus: day16RewardStatus
+                                    };
+                                    
+                                    if (existingIndex >= 0) {
+                                        // 更新现有订单
+                                        orders[existingIndex] = orderData;
+                                        updatedOrders.push(orderData);
+                                        updateCount++;
+                                    } else {
+                                        // 新增订单
+                                        orders.push(orderData);
+                                        newOrders.push(orderData);
+                                        importCount++;
+                                        
+                                        // 更新会员状态（不再是空号）
+                                        member.isEmptyAccount = false;
+                                        member.orderCount = (member.orderCount || 0) + 1;
+                                    }
+                                    
+                                    updateLoading(40 + Math.floor((i / lines.length) * 30), `已处理 ${i + 1}/${lines.length} 个订单...`);
+                                }
+                            } catch (error) {
+                                errorCount++;
+                                console.error(`处理第${i+1}行时出错:`, error);
+                            }
+                        }
+                        
+                        updateLoading(70, '保存订单数据...');
+                        localStorage.setItem('orders', JSON.stringify(orders));
+                        localStorage.setItem('members', JSON.stringify(members));
+                        
+                        updateLoading(75, '开始计算订单奖励...');
+                        
+                        // 为新订单计算奖励
+                        let rewardCalculations = [];
+                        for (let i = 0; i < newOrders.length; i++) {
+                            let order = newOrders[i];
+                            updateLoading(75 + Math.floor((i / newOrders.length) * 20), `计算奖励 ${i + 1}/${newOrders.length}...`);
+                            
+                            try {
+                                // 为每个新订单计算奖励
+                                await calculateOrderRewardsForImport(order.memberId, order.orderTime, order.name);
+                                rewardCalculations.push({
+                                    orderId: order.id,
+                                    memberId: order.memberId,
+                                    success: true
+                                });
+                            } catch (error) {
+                                rewardCalculations.push({
+                                    orderId: order.id,
+                                    memberId: order.memberId,
+                                    success: false,
+                                    error: error.message
+                                });
+                                errorCount++;
+                            }
+                        }
+                        
+                        updateLoading(95, '刷新数据表格...');
+                        refreshAllTables();
+                        
+                        updateLoading(100, '导入完成！');
+                        setTimeout(() => {
+                            hideLoading();
+                            
+                            // 显示导入结果
+                            let message = `订单数据导入完成！`;
+                            message += `\n新增订单: ${importCount} 个`;
+                            message += `\n更新订单: ${updateCount} 个`;
+                            message += `\n成功计算奖励: ${rewardCalculations.filter(r => r.success).length} 个`;
+                            message += `\n错误/跳过: ${errorCount} 个`;
+                            
+                            if (errorCount > 0) {
+                                showErrorMessage(message);
+                            } else {
+                                showSuccessMessage(message);
+                            }
+                            
+                            $('#importOrderFile').val('');
+                        }, 500);
+                        
+                    } catch (error) {
+                        hideLoading();
+                        showErrorMessage(`导入失败：${error.message}`);
+                        console.error('导入错误:', error);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    hideLoading();
+                    showErrorMessage('文件读取失败！');
+                };
+                
+                reader.readAsText(file, 'UTF-8');
+            });
+            
+            // 解析CSV行的辅助函数（处理引号内的逗号）
+            function parseCSVLine(line) {
+                let result = [];
+                let inQuotes = false;
+                let currentField = '';
+                
+                for (let i = 0; i < line.length; i++) {
+                    let char = line[i];
+                    
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(currentField);
+                        currentField = '';
+                    } else {
+                        currentField += char;
+                    }
+                }
+                
+                // 添加最后一个字段
+                result.push(currentField);
+                
+                // 移除字段前后的引号
+                return result.map(field => field.replace(/^"|"$/g, '').trim());
+            }
+            
+            // 为导入订单计算奖励的函数（无UI干扰）
+            async function calculateOrderRewardsForImport(memberId, orderTime, memberName) {
+                return new Promise((resolve) => {
+                    // 直接调用奖励计算函数，但不更新UI
+                    setTimeout(() => {
+                        // 计算直推奖
+                        let members = JSON.parse(localStorage.getItem('members')) || [];
+                        let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                        let member = members.find(m => m.id === memberId);
+                        if (!member) {
+                            resolve();
+                            return;
+                        }
+                        
+                        // 直推奖（给推荐人）
+                        if (member.referrer) {
+                            let referrer = members.find(m => m.id === member.referrer);
+                            if (referrer && !referrer.isEmptyAccount) {
+                                let directRewardAmount = ORDER_PRICE * 0.05;
+                                
+                                // 如果推荐人是区代，需要考虑每日封顶
+                                if (referrer.level === '区代') {
+                                    let todayTotal = rewards
+                                        .filter(r => r.memberId === referrer.id && 
+                                                    r.rewardTime === orderTime &&
+                                                    ['直推奖', '平级奖', '区代奖'].includes(r.type))
+                                        .reduce((sum, r) => sum + r.amount, 0);
+                                    
+                                    let remaining = AREA_AGENT_DAILY_CAP - todayTotal;
+                                    
+                                    if (remaining > 0) {
+                                        let actualReward = Math.min(directRewardAmount, remaining);
+                                        addRewardRecord(
+                                            referrer.id,
+                                            referrer.name,
+                                            '直推奖',
+                                            actualReward,
+                                            orderTime,
+                                            memberId
+                                        );
+                                    }
+                                } else {
+                                    // 非区代，正常发放
+                                    addRewardRecord(
+                                        referrer.id,
+                                        referrer.name,
+                                        '直推奖',
+                                        directRewardAmount,
+                                        orderTime,
+                                        memberId
+                                    );
+                                }
+                            }
+                        }
+                        
+                        // 区代奖
+                        let areaAgents = getUpperAreaAgentsOptimized(memberId);
+                        areaAgents.forEach(agentId => {
+                            let agent = members.find(m => m.id === agentId);
+                            if (agent && !agent.isEmptyAccount && agent.level === '区代') {
+                                let areaReward = calculateAreaReward(agentId, orderTime);
+                                if (areaReward > 0) {
+                                    addRewardRecord(
+                                        agentId,
+                                        agent.name,
+                                        '区代奖',
+                                        areaReward,
+                                        orderTime,
+                                        memberId
+                                    );
+                                }
+                            }
+                        });
+                        
+                        // 平级奖
+                        areaAgents.forEach(agentId => {
+                            let agent = members.find(m => m.id === agentId);
+                            if (agent && !agent.isEmptyAccount && agent.level === '区代') {
+                                let upperAreaAgentId = getUpperAreaAgentForPeerRewardOptimized(agentId);
+                                if (upperAreaAgentId) {
+                                    let upperAgent = members.find(m => m.id === upperAreaAgentId);
+                                    if (upperAgent && upperAgent.level === '区代' && !upperAgent.isEmptyAccount) {
+                                        let areaRewardToday = rewards
+                                            .filter(r => r.memberId === agentId && 
+                                                        r.rewardTime === orderTime &&
+                                                        r.type === '区代奖')
+                                            .reduce((sum, r) => sum + r.amount, 0);
+                                        
+                                        let peerRewardAmount = areaRewardToday;
+                                        
+                                        let todayTotal = rewards
+                                            .filter(r => r.memberId === upperAreaAgentId && 
+                                                        r.rewardTime === orderTime &&
+                                                        ['直推奖', '平级奖', '区代奖'].includes(r.type))
+                                            .reduce((sum, r) => sum + r.amount, 0);
+                                        
+                                        let remaining = AREA_AGENT_DAILY_CAP - todayTotal;
+                                        
+                                        if (remaining > 0 && peerRewardAmount > 0) {
+                                            let actualReward = Math.min(peerRewardAmount, remaining);
+                                            addRewardRecord(
+                                                upperAreaAgentId,
+                                                upperAgent.name,
+                                                '平级奖',
+                                                actualReward,
+                                                orderTime,
+                                                agentId
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // 市代奖
+                        let cityAgents = getUpperCityAgentsOptimized(memberId);
+                        cityAgents.forEach(agentId => {
+                            let agent = members.find(m => m.id === agentId);
+                            if (agent && !agent.isEmptyAccount && agent.level === '市代') {
+                                let cityReward = ORDER_PRICE * 0.03;
+                                addRewardRecord(
+                                    agentId,
+                                    agent.name,
+                                    '市代奖',
+                                    cityReward,
+                                    orderTime,
+                                    memberId
+                                );
+                            }
+                        });
+                        
+                        // 检查自动复购
+                        checkAutoRepurchase(memberId);
+                        
+                        resolve();
+                    }, 50);
+                });
+            }
+            
+            // CSV下载函数
+            function downloadCSV(csvContent, fileName) {
+                let blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                let link = document.createElement("a");
+                let url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", fileName);
+                link.style.display = "none";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+            
             // 导出会员数据
             $('#exportMemberBtn').click(function() {
                 let members = JSON.parse(localStorage.getItem('members')) || [];
@@ -3174,12 +3545,16 @@
                 
                 reader.onload = function(e) {
                     try {
+                        showLoading('正在导入会员数据...');
+                        updateLoading(30, '读取文件...');
+                        
                         let csvContent = e.target.result;
                         // 移除BOM头
                         if (csvContent.charCodeAt(0) === 0xFEFF) {
                             csvContent = csvContent.substring(1);
                         }
                         
+                        updateLoading(50, '解析数据...');
                         let lines = csvContent.split('\n').filter(line => line.trim() !== '');
                         // 移除标题行
                         lines.shift();
@@ -3230,91 +3605,27 @@
                             }
                         });
                         
+                        updateLoading(80, '保存数据...');
                         localStorage.setItem('members', JSON.stringify(members));
+                        
+                        updateLoading(90, '刷新界面...');
                         refreshAllTables();
                         
-                        showSuccessMessage(`会员数据导入成功！新增: ${importCount} 条，更新: ${updateCount} 条`);
-                        $('#importMemberFile').val('');
+                        updateLoading(100, '导入完成！');
+                        setTimeout(() => {
+                            hideLoading();
+                            showSuccessMessage(`会员数据导入成功！新增: ${importCount} 条，更新: ${updateCount} 条`);
+                            $('#importMemberFile').val('');
+                        }, 500);
                     } catch (error) {
+                        hideLoading();
                         showErrorMessage(`导入失败：${error.message}`);
                         console.error('导入错误:', error);
                     }
                 };
                 
                 reader.onerror = function() {
-                    showErrorMessage('文件读取失败！');
-                };
-                
-                reader.readAsText(file, 'UTF-8');
-            });
-            
-            // 导入订单数据
-            $('#importOrderBtn').click(function() {
-                let fileInput = $('#importOrderFile')[0];
-                if (fileInput.files.length === 0) {
-                    showErrorMessage('请选择要导入的CSV文件！');
-                    return;
-                }
-                
-                let file = fileInput.files[0];
-                let reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    try {
-                        let csvContent = e.target.result;
-                        if (csvContent.charCodeAt(0) === 0xFEFF) {
-                            csvContent = csvContent.substring(1);
-                        }
-                        
-                        let lines = csvContent.split('\n').filter(line => line.trim() !== '');
-                        lines.shift();
-                        
-                        let orders = JSON.parse(localStorage.getItem('orders')) || [];
-                        let importCount = 0;
-                        let updateCount = 0;
-                        
-                        lines.forEach(line => {
-                            if (line.trim() === '') return;
-                            
-                            let columns = line.split(',').map(col => col.replace(/^"|"$/g, '').trim());
-                            
-                            if (columns.length >= 8) {
-                                let id = parseInt(columns[0]) || 0;
-                                let existingIndex = orders.findIndex(o => o.id === id);
-                                
-                                let orderData = {
-                                    id: id,
-                                    memberId: parseInt(columns[1]) || 0,
-                                    name: columns[2],
-                                    amount: parseFloat(columns[3]) || ORDER_PRICE,
-                                    type: columns[4],
-                                    orderNo: columns[5],
-                                    orderTime: columns[6],
-                                    day16RewardStatus: columns[7] || '未到时间'
-                                };
-                                
-                                if (existingIndex >= 0) {
-                                    orders[existingIndex] = orderData;
-                                    updateCount++;
-                                } else {
-                                    orders.push(orderData);
-                                    importCount++;
-                                }
-                            }
-                        });
-                        
-                        localStorage.setItem('orders', JSON.stringify(orders));
-                        refreshAllTables();
-                        
-                        showSuccessMessage(`订单数据导入成功！新增: ${importCount} 条，更新: ${updateCount} 条`);
-                        $('#importOrderFile').val('');
-                    } catch (error) {
-                        showErrorMessage(`导入失败：${error.message}`);
-                        console.error('导入错误:', error);
-                    }
-                };
-                
-                reader.onerror = function() {
+                    hideLoading();
                     showErrorMessage('文件读取失败！');
                 };
                 
@@ -3334,11 +3645,15 @@
                 
                 reader.onload = function(e) {
                     try {
+                        showLoading('正在导入奖励数据...');
+                        updateLoading(30, '读取文件...');
+                        
                         let csvContent = e.target.result;
                         if (csvContent.charCodeAt(0) === 0xFEFF) {
                             csvContent = csvContent.substring(1);
                         }
                         
+                        updateLoading(50, '解析数据...');
                         let lines = csvContent.split('\n').filter(line => line.trim() !== '');
                         lines.shift();
                         
@@ -3377,18 +3692,27 @@
                             }
                         });
                         
+                        updateLoading(80, '保存数据...');
                         localStorage.setItem('rewards', JSON.stringify(rewards));
+                        
+                        updateLoading(90, '刷新界面...');
                         refreshAllTables();
                         
-                        showSuccessMessage(`奖励数据导入成功！新增: ${importCount} 条，更新: ${updateCount} 条`);
-                        $('#importRewardFile').val('');
+                        updateLoading(100, '导入完成！');
+                        setTimeout(() => {
+                            hideLoading();
+                            showSuccessMessage(`奖励数据导入成功！新增: ${importCount} 条，更新: ${updateCount} 条`);
+                            $('#importRewardFile').val('');
+                        }, 500);
                     } catch (error) {
+                        hideLoading();
                         showErrorMessage(`导入失败：${error.message}`);
                         console.error('导入错误:', error);
                     }
                 };
                 
                 reader.onerror = function() {
+                    hideLoading();
                     showErrorMessage('文件读取失败！');
                 };
                 
