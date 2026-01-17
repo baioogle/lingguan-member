@@ -1,0 +1,3943 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>凌冠会员信息表</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body { padding: 20px; background-color: #f8f9fa; }
+        .tab-content { margin-top: 20px; }
+        .filter-area { background: #fff; padding: 15px; border-radius: 5px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .time-control { 
+            background: #fff; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        table th { text-align: center; background-color: #f1f3f4; }
+        table td { vertical-align: middle; text-align: center; }
+        .operation-btn { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; }
+        .clear-data-area { 
+            border-top: 2px solid #dee2e6; 
+            padding-top: 20px; 
+            margin-top: 20px; 
+        }
+        .reward-reminder {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .demo-data-btn {
+            margin-left: 10px;
+        }
+        .level-member { color: #6c757d; }
+        .level-area { color: #198754; font-weight: bold; }
+        .level-city { color: #0d6efd; font-weight: bold; }
+        .green-points-warning {
+            color: #856404;
+            font-weight: bold;
+            background-color: #fff3cd;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid #ffeaa7;
+        }
+        .success-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            max-width: 500px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .nav-tabs .nav-link.active {
+            background-color: #fff;
+            border-bottom: 2px solid #0d6efd;
+            color: #0d6efd;
+            font-weight: bold;
+        }
+        .badge-custom {
+            font-size: 0.8em;
+            padding: 4px 8px;
+        }
+        .modal-lg {
+            max-width: 1000px;
+        }
+        .form-control:readonly {
+            background-color: #e9ecef;
+            opacity: 1;
+        }
+        .statistics-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .statistics-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .statistics-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .daily-stats-table th {
+            background-color: #e3f2fd;
+        }
+        .daily-total-row {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            flex-direction: column;
+            display: none;
+        }
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-text {
+            font-size: 1.2rem;
+            color: #333;
+            font-weight: 500;
+        }
+        .progress-container {
+            width: 300px;
+            margin-top: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 20px;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        /* 搜索区域样式 */
+        .search-area {
+            background: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .search-title {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .search-results {
+            margin-top: 20px;
+        }
+        .member-tree {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+        .tree-node {
+            padding: 5px 10px;
+            margin: 2px 0;
+            background-color: white;
+            border-radius: 3px;
+            border-left: 3px solid #0d6efd;
+        }
+        .tree-node.level-1 { margin-left: 0px; border-left-color: #198754; }
+        .tree-node.level-2 { margin-left: 20px; border-left-color: #0d6efd; }
+        .tree-node.level-3 { margin-left: 40px; border-left-color: #6c757d; }
+        .tree-node.level-4 { margin-left: 60px; border-left-color: #ffc107; }
+        .tree-node.level-5 { margin-left: 80px; border-left-color: #dc3545; }
+        .member-link {
+            cursor: pointer;
+            color: #0d6efd;
+            text-decoration: underline;
+        }
+        .member-link:hover {
+            color: #0b5ed7;
+            text-decoration: none;
+        }
+        /* 导入订单奖励计算状态 */
+        .import-reward-status {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #0d6efd;
+        }
+        .reward-calc-step {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+        }
+        .reward-calc-step.success {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            border-left: 3px solid #198754;
+        }
+        .reward-calc-step.error {
+            background-color: #f8d7da;
+            color: #842029;
+            border-left: 3px solid #dc3545;
+        }
+        .reward-calc-step.processing {
+            background-color: #cfe2ff;
+            color: #084298;
+            border-left: 3px solid #0d6efd;
+        }
+    </style>
+</head>
+<body>
+    <!-- 加载遮罩层 -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">正在处理，请稍候...</div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+    </div>
+
+    <!-- 成功提示 -->
+    <div id="successToast" class="toast success-message" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-success text-white">
+            <strong class="me-auto">✓ 操作成功</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <span id="successMessage"></span>
+        </div>
+    </div>
+
+    <!-- 错误提示 -->
+    <div id="errorToast" class="toast success-message" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+            <strong class="me-auto">✗ 操作失败</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <span id="errorMessage"></span>
+        </div>
+    </div>
+
+    <!-- 基准时间控制 -->
+    <div class="time-control">
+        <h5>📅 基准时间控制</h5>
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <button id="minusDay" class="btn btn-outline-secondary">◀ 减少一天</button>
+            <span id="baseTime" class="mx-3 fw-bold fs-5">2025-09-09</span>
+            <button id="addDay" class="btn btn-outline-primary">增加一天 ▶</button>
+            <button id="check16DayReward" class="btn btn-warning ms-3">🔍 检查16天奖励</button>
+            <button id="createDemoData" class="btn btn-info demo-data-btn">📊 创建演示数据</button>
+        </div>
+        <div id="greenPointsMonitor" class="mt-3 p-2 bg-warning bg-opacity-10 border-start border-warning border-3" style="display: none;">
+            <div class="d-flex align-items-center">
+                <span class="badge bg-warning text-dark me-2">⚠️ 绿积分监控</span>
+                <span id="greenPointsAlert" class="fs-6"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 标签页导航 -->
+    <ul class="nav nav-tabs" id="myTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="member-tab" data-bs-toggle="tab" data-bs-target="#member" type="button" role="tab">👥 会员信息表</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="order-tab" data-bs-toggle="tab" data-bs-target="#order" type="button" role="tab">🛒 订单表</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="reward-tab" data-bs-toggle="tab" data-bs-target="#reward" type="button" role="tab">💰 积分奖励表</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="statistics-tab" data-bs-toggle="tab" data-bs-target="#statistics" type="button" role="tab">📊 统计报表</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="import-export-tab" data-bs-toggle="tab" data-bs-target="#import-export" type="button" role="tab">📁 导入/导出</button>
+        </li>
+    </ul>
+
+    <!-- 标签页内容 -->
+    <div class="tab-content" id="myTabContent">
+        <!-- 会员信息标签页 -->
+        <div class="tab-pane fade show active" id="member" role="tabpanel" aria-labelledby="member-tab">
+            <!-- 搜索区域 -->
+            <div class="search-area">
+                <h5 class="search-title">🔍 会员搜索与筛选</h5>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="searchMemberId" class="form-label">按ID搜索</label>
+                        <input type="number" class="form-control" id="searchMemberId" placeholder="输入会员ID">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="searchMemberName" class="form-label">按姓名搜索</label>
+                        <input type="text" class="form-control" id="searchMemberName" placeholder="输入姓名">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filterMemberLevel" class="form-label">按级别筛选</label>
+                        <select class="form-select" id="filterMemberLevel">
+                            <option value="">全部级别</option>
+                            <option value="会员">会员</option>
+                            <option value="区代">区代</option>
+                            <option value="市代">市代</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button id="searchMemberBtn" class="btn btn-primary w-100 me-2">🔍 搜索</button>
+                        <button id="clearSearchBtn" class="btn btn-secondary w-100">🔄 清空</button>
+                    </div>
+                </div>
+                
+                <!-- 搜索结果/会员树形结构 -->
+                <div id="searchResults" class="search-results" style="display: none;">
+                    <h6>搜索结果 / 会员结构</h6>
+                    <div id="memberTree" class="member-tree"></div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">➕ 添加会员</div>
+                <div class="card-body">
+                    <form id="addMemberForm">
+                        <div class="row g-3">
+                            <div class="col-md-2">
+                                <label for="memberId" class="form-label">会员ID</label>
+                                <input type="number" class="form-control" id="memberId" placeholder="自动生成">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="memberName" class="form-label">姓名 *</label>
+                                <input type="text" class="form-control" id="memberName" required placeholder="请输入姓名">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="referrer" class="form-label">推荐人ID</label>
+                                <input type="number" class="form-control" id="referrer" placeholder="无则留空">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="contactPerson" class="form-label">接点人ID</label>
+                                <input type="number" class="form-control" id="contactPerson" placeholder="无则留空">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="memberLevel" class="form-label">初始级别</label>
+                                <select class="form-select" id="memberLevel">
+                                    <option value="会员">会员</option>
+                                    <option value="区代" disabled>区代（自动升级）</option>
+                                    <option value="市代" disabled>市代（自动升级）</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="isReinvest" class="form-label">是否复投</label>
+                                <select class="form-select" id="isReinvest">
+                                    <option value="false">否</option>
+                                    <option value="true">是</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="registerTime" class="form-label">注册时间</label>
+                                <input type="date" class="form-control" id="registerTime" value="2025-09-09">
+                            </div>
+                            <div class="col-md-12 mt-2">
+                                <button type="submit" class="btn btn-success px-4">✅ 添加会员</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">📋 会员信息列表</div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>姓名</th>
+                                    <th>推荐人</th>
+                                    <th>接点人</th>
+                                    <th>直推数量</th>
+                                    <th>级别</th>
+                                    <th>复购次数</th>
+                                    <th>复投</th>
+                                    <th>累计业绩</th>
+                                    <th>系统奖励</th>
+                                    <th>直推奖</th>
+                                    <th>区代奖</th>
+                                    <th>平级奖</th>
+                                    <th>市代奖</th>
+                                    <th>绿积分</th>
+                                    <th>红积分</th>
+                                    <th>累计收益</th>
+                                    <th>注册时间</th>
+                                    <th>是否空号</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="memberTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 订单标签页 -->
+        <div class="tab-pane fade" id="order" role="tabpanel" aria-labelledby="order-tab">
+            <div class="card mb-4">
+                <div class="card-header">➕ 添加订单</div>
+                <div class="card-body">
+                    <form id="addOrderForm">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="orderMemberId" class="form-label">会员ID *</label>
+                                <input type="number" class="form-control" id="orderMemberId" required placeholder="请输入会员ID">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="orderMemberName" class="form-label">姓名 *</label>
+                                <input type="text" class="form-control" id="orderMemberName" required placeholder="请输入姓名">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="orderAmount" class="form-label">下单金额</label>
+                                <input type="number" class="form-control" id="orderAmount" value="1998" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="orderType" class="form-label">订单类型</label>
+                                <select class="form-select" id="orderType">
+                                    <option value="普通订单">普通订单</option>
+                                    <option value="复购订单">复购订单</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="orderTime" class="form-label">下单时间</label>
+                                <input type="date" class="form-control" id="orderTime" value="2025-09-09">
+                            </div>
+                            <div class="col-md-12 mt-2">
+                                <button type="submit" class="btn btn-success px-4">✅ 添加订单</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">📋 订单列表</div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>会员ID</th>
+                                    <th>姓名</th>
+                                    <th>下单金额</th>
+                                    <th>订单类型</th>
+                                    <th>订单编号</th>
+                                    <th>下单时间</th>
+                                    <th>16天奖励状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orderTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 积分奖励标签页 -->
+        <div class="tab-pane fade" id="reward" role="tabpanel" aria-labelledby="reward-tab">
+            <div class="filter-area">
+                <h5>🔍 积分奖励筛选</h5>
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label for="filterRewardId" class="form-label">奖励ID</label>
+                        <input type="number" class="form-control" id="filterRewardId" placeholder="请输入ID">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filterRewardName" class="form-label">会员姓名</label>
+                        <input type="text" class="form-control" id="filterRewardName" placeholder="请输入姓名">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filterRewardType" class="form-label">奖励类型</label>
+                        <select class="form-select" id="filterRewardType">
+                            <option value="">全部</option>
+                            <option value="系统奖励">系统奖励</option>
+                            <option value="直推奖">直推奖</option>
+                            <option value="区代奖">区代奖</option>
+                            <option value="平级奖">平级奖</option>
+                            <option value="市代奖">市代奖</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filterStartTime" class="form-label">开始时间</label>
+                        <input type="date" class="form-control" id="filterStartTime">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filterEndTime" class="form-label">结束时间</label>
+                        <input type="date" class="form-control" id="filterEndTime">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button id="filterRewardBtn" class="btn btn-primary w-100">🔍 筛选</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">➕ 添加积分奖励</div>
+                <div class="card-body">
+                    <form id="addRewardForm">
+                        <div class="row g-3">
+                            <div class="col-md-2">
+                                <label for="rewardMemberId" class="form-label">会员ID *</label>
+                                <input type="number" class="form-control" id="rewardMemberId" required placeholder="请输入会员ID">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="rewardMemberName" class="form-label">姓名 *</label>
+                                <input type="text" class="form-control" id="rewardMemberName" required placeholder="请输入姓名">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="rewardType" class="form-label">奖励类型 *</label>
+                                <select class="form-select" id="rewardType" required>
+                                    <option value="">请选择</option>
+                                    <option value="系统奖励">系统奖励</option>
+                                    <option value="直推奖">直推奖</option>
+                                    <option value="区代奖">区代奖</option>
+                                    <option value="平级奖">平级奖</option>
+                                    <option value="市代奖">市代奖</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="rewardAmount" class="form-label">奖励数量 *</label>
+                                <input type="number" class="form-control" id="rewardAmount" required placeholder="请输入金额" step="0.01">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="rewardTime" class="form-label">奖励时间</label>
+                                <input type="date" class="form-control" id="rewardTime" value="2025-09-09">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="targetMemberId" class="form-label">对方ID</label>
+                                <input type="number" class="form-control" id="targetMemberId" placeholder="无则留空">
+                            </div>
+                            <div class="col-md-12 mt-2">
+                                <button type="submit" class="btn btn-success px-4">✅ 添加奖励</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">📋 积分奖励列表</div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>会员ID</th>
+                                    <th>姓名</th>
+                                    <th>奖励类型</th>
+                                    <th>奖励数量</th>
+                                    <th>绿积分(75%)</th>
+                                    <th>红积分(25%)</th>
+                                    <th>奖励时间</th>
+                                    <th>对方ID</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rewardTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计报表标签页 -->
+        <div class="tab-pane fade" id="statistics" role="tabpanel" aria-labelledby="statistics-tab">
+            <div class="filter-area">
+                <h5>📊 统计报表筛选</h5>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="statStartDate" class="form-label">开始日期</label>
+                        <input type="date" class="form-control" id="statStartDate">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="statEndDate" class="form-label">结束日期</label>
+                        <input type="date" class="form-control" id="statEndDate">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="statGroupBy" class="form-label">分组方式</label>
+                        <select class="form-select" id="statGroupBy">
+                            <option value="day">按天统计</option>
+                            <option value="week">按周统计</option>
+                            <option value="month">按月统计</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button id="statisticsBtn" class="btn btn-primary w-100">📈 生成统计</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 统计概览卡片 -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="statistics-card bg-primary">
+                        <div class="statistics-number" id="totalOrders">0</div>
+                        <div class="statistics-label">总订单数</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="statistics-card bg-success">
+                        <div class="statistics-number" id="totalRevenue">0</div>
+                        <div class="statistics-label">总销售额(元)</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="statistics-card bg-warning">
+                        <div class="statistics-number" id="totalRewards">0</div>
+                        <div class="statistics-label">总奖励金额(元)</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="statistics-card bg-info">
+                        <div class="statistics-number" id="totalMembers">0</div>
+                        <div class="statistics-label">总会员数</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 奖励类型分布 -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">🎯 奖励类型分布</div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>奖励类型</th>
+                                        <th>数量</th>
+                                        <th>金额(元)</th>
+                                        <th>占比</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rewardTypeStats"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">📅 每日统计</div>
+                        <div class="card-body">
+                            <table class="table table-bordered daily-stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>日期</th>
+                                        <th>订单数</th>
+                                        <th>销售额</th>
+                                        <th>奖励数</th>
+                                        <th>奖励金额</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dailyStatsTable"></tbody>
+                                <tfoot>
+                                    <tr class="daily-total-row">
+                                        <td>总计</td>
+                                        <td id="dailyTotalOrders">0</td>
+                                        <td id="dailyTotalRevenue">0</td>
+                                        <td id="dailyTotalRewards">0</td>
+                                        <td id="dailyTotalRewardAmount">0</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 详细统计数据表 -->
+            <div class="card mb-4">
+                <div class="card-header">📈 详细统计表</div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th rowspan="2">日期</th>
+                                    <th colspan="5" class="text-center">订单统计</th>
+                                    <th colspan="6" class="text-center">奖励统计</th>
+                                    <th colspan="2" class="text-center">积分统计</th>
+                                </tr>
+                                <tr>
+                                    <th>普通订单</th>
+                                    <th>复购订单</th>
+                                    <th>总订单数</th>
+                                    <th>总金额</th>
+                                    <th>16天奖励</th>
+                                    <th>系统奖励</th>
+                                    <th>直推奖</th>
+                                    <th>区代奖</th>
+                                    <th>平级奖</th>
+                                    <th>市代奖</th>
+                                    <th>总奖励</th>
+                                    <th>绿积分</th>
+                                    <th>红积分</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detailedStatsTable"></tbody>
+                            <tfoot>
+                                <tr class="table-warning">
+                                    <td><strong>总计</strong></td>
+                                    <td id="totalNormalOrders">0</td>
+                                    <td id="totalRepurchaseOrders">0</td>
+                                    <td id="totalAllOrders">0</td>
+                                    <td id="totalAllRevenue">0</td>
+                                    <td id="total16DayRewards">0</td>
+                                    <td id="totalSystemRewards">0</td>
+                                    <td id="totalDirectRewards">0</td>
+                                    <td id="totalAreaRewards">0</td>
+                                    <td id="totalPeerRewards">0</td>
+                                    <td id="totalCityRewards">0</td>
+                                    <td id="totalAllRewards">0</td>
+                                    <td id="totalGreenPoints">0</td>
+                                    <td id="totalRedPoints">0</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 会员级别统计 -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">👥 会员级别分布</div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>会员级别</th>
+                                        <th>人数</th>
+                                        <th>占比</th>
+                                        <th>平均业绩</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="memberLevelStats"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">💰 收益排行榜（前10）</div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>排名</th>
+                                        <th>会员ID</th>
+                                        <th>姓名</th>
+                                        <th>级别</th>
+                                        <th>总收益(元)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="incomeRankingTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导入/导出标签页 -->
+        <div class="tab-pane fade" id="import-export" role="tabpanel" aria-labelledby="import-export-tab">
+            <div class="card">
+                <div class="card-header">📁 数据导入/导出</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <h5>📤 数据导出</h5>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button id="exportMemberBtn" class="btn btn-primary">导出会员信息表</button>
+                                <button id="exportOrderBtn" class="btn btn-primary">导出订单表</button>
+                                <button id="exportRewardBtn" class="btn btn-primary">导出积分奖励表</button>
+                                <button id="exportStatisticsBtn" class="btn btn-info">导出统计报表</button>
+                                <button id="exportAllBtn" class="btn btn-success">导出所有数据</button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <h5>📥 数据导入</h5>
+                            <div class="mb-3">
+                                <label for="importMemberFile" class="form-label">导入会员信息表 (CSV)</label>
+                                <input type="file" class="form-control" id="importMemberFile" accept=".csv">
+                                <button id="importMemberBtn" class="btn btn-success mt-2">确认导入</button>
+                            </div>
+                            <div class="mb-3">
+                                <label for="importOrderFile" class="form-label">导入订单表 (CSV)</label>
+                                <input type="file" class="form-control" id="importOrderFile" accept=".csv">
+                                <button id="importOrderBtn" class="btn btn-success mt-2">确认导入</button>
+                            </div>
+                            <div class="mb-3">
+                                <label for="importRewardFile" class="form-label">导入积分奖励表 (CSV)</label>
+                                <input type="file" class="form-control" id="importRewardFile" accept=".csv">
+                                <button id="importRewardBtn" class="btn btn-success mt-2">确认导入</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="clear-data-area">
+                        <h5 class="text-danger">⚠️ 数据清空</h5>
+                        <p class="text-danger">注意：清空数据后不可恢复，请谨慎操作！</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button id="clearMemberBtn" class="btn btn-danger">清空会员信息表</button>
+                            <button id="clearOrderBtn" class="btn btn-danger">清空订单表</button>
+                            <button id="clearRewardBtn" class="btn btn-danger">清空积分奖励表</button>
+                            <button id="clearAllBtn" class="btn btn-danger">清空所有表数据</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑会员模态框 -->
+    <div class="modal fade" id="editMemberModal" tabindex="-1" aria-labelledby="editMemberModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editMemberModalLabel">✏️ 编辑会员信息</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editMemberForm">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="editMemberId" class="form-label">会员ID</label>
+                                <input type="text" class="form-control" id="editMemberId" readonly>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="editMemberName" class="form-label">姓名 *</label>
+                                <input type="text" class="form-control" id="editMemberName" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="editReferrer" class="form-label">推荐人ID</label>
+                                <input type="number" class="form-control" id="editReferrer">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="editContactPerson" class="form-label">接点人ID</label>
+                                <input type="number" class="form-control" id="editContactPerson">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editDirectPush" class="form-label">直推数量</label>
+                                <input type="number" class="form-control" id="editDirectPush" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editMemberLevel" class="form-label">级别</label>
+                                <select class="form-select" id="editMemberLevel">
+                                    <option value="会员">会员</option>
+                                    <option value="区代">区代</option>
+                                    <option value="市代">市代</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editIsReinvest" class="form-label">是否复投</label>
+                                <select class="form-select" id="editIsReinvest">
+                                    <option value="false">否</option>
+                                    <option value="true">是</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editRepurchaseTimes" class="form-label">复购次数</label>
+                                <input type="number" class="form-control" id="editRepurchaseTimes" min="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editOrderCount" class="form-label">订单数量</label>
+                                <input type="number" class="form-control" id="editOrderCount" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editTotalPerformance" class="form-label">累计业绩</label>
+                                <input type="number" class="form-control" id="editTotalPerformance" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editSystemReward" class="form-label">系统奖励</label>
+                                <input type="number" step="0.01" class="form-control" id="editSystemReward" min="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editDirectReward" class="form-label">直推奖</label>
+                                <input type="number" step="0.01" class="form-control" id="editDirectReward" min="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editAreaReward" class="form-label">区代奖</label>
+                                <input type="number" step="0.01" class="form-control" id="editAreaReward" min="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editPeerReward" class="form-label">平级奖</label>
+                                <input type="number" step="0.01" class="form-control" id="editPeerReward" min="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editCityReward" class="form-label">市代奖</label>
+                                <input type="number" step="0.01" class="form-control" id="editCityReward" min="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editGreenPoints" class="form-label">绿积分</label>
+                                <input type="number" step="0.01" class="form-control" id="editGreenPoints" min="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editRedPoints" class="form-label">红积分</label>
+                                <input type="number" step="0.01" class="form-control" id="editRedPoints" min="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editTotalIncome" class="form-label">累计收益</label>
+                                <input type="number" step="0.01" class="form-control" id="editTotalIncome" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editIsEmptyAccount" class="form-label">是否空号</label>
+                                <select class="form-select" id="editIsEmptyAccount">
+                                    <option value="false">否</option>
+                                    <option value="true">是</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="editRegisterTime" class="form-label">注册时间</label>
+                                <input type="date" class="form-control" id="editRegisterTime">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveMemberEdit">保存修改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑订单模态框 -->
+    <div class="modal fade" id="editOrderModal" tabindex="-1" aria-labelledby="editOrderModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editOrderModalLabel">✏️ 编辑订单信息</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editOrderForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="editOrderId" class="form-label">订单ID</label>
+                                <input type="text" class="form-control" id="editOrderId" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editOrderMemberId" class="form-label">会员ID *</label>
+                                <input type="number" class="form-control" id="editOrderMemberId" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editOrderMemberName" class="form-label">姓名 *</label>
+                                <input type="text" class="form-control" id="editOrderMemberName" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editOrderAmount" class="form-label">下单金额</label>
+                                <input type="number" class="form-control" id="editOrderAmount" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editOrderType" class="form-label">订单类型</label>
+                                <select class="form-select" id="editOrderType">
+                                    <option value="普通订单">普通订单</option>
+                                    <option value="复购订单">复购订单</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editOrderTime" class="form-label">下单时间</label>
+                                <input type="date" class="form-control" id="editOrderTime">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit16DayRewardStatus" class="form-label">16天奖励状态</label>
+                                <select class="form-select" id="edit16DayRewardStatus">
+                                    <option value="未到时间">未到时间</option>
+                                    <option value="已发放">已发放</option>
+                                    <option value="无">无</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveOrderEdit">保存修改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑奖励模态框 -->
+    <div class="modal fade" id="editRewardModal" tabindex="-1" aria-labelledby="editRewardModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editRewardModalLabel">✏️ 编辑积分奖励</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editRewardForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="editRewardId" class="form-label">奖励ID</label>
+                                <input type="text" class="form-control" id="editRewardId" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editRewardMemberId" class="form-label">会员ID *</label>
+                                <input type="number" class="form-control" id="editRewardMemberId" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editRewardMemberName" class="form-label">姓名 *</label>
+                                <input type="text" class="form-control" id="editRewardMemberName" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editRewardType" class="form-label">奖励类型 *</label>
+                                <select class="form-select" id="editRewardType" required>
+                                    <option value="">请选择</option>
+                                    <option value="系统奖励">系统奖励</option>
+                                    <option value="直推奖">直推奖</option>
+                                    <option value="区代奖">区代奖</option>
+                                    <option value="平级奖">平级奖</option>
+                                    <option value="市代奖">市代奖</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editRewardAmount" class="form-label">奖励数量 *</label>
+                                <input type="number" step="0.01" class="form-control" id="editRewardAmount" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editRewardTime" class="form-label">奖励时间</label>
+                                <input type="date" class="form-control" id="editRewardTime">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editTargetMemberId" class="form-label">对方ID</label>
+                                <input type="number" class="form-control" id="editTargetMemberId">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveRewardEdit">保存修改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // 初始化本地存储
+            if (!localStorage.getItem('members')) localStorage.setItem('members', JSON.stringify([]));
+            if (!localStorage.getItem('orders')) localStorage.setItem('orders', JSON.stringify([]));
+            if (!localStorage.getItem('rewards')) localStorage.setItem('rewards', JSON.stringify([]));
+            
+            // 系统常量
+            const ORDER_PRICE = 1998;
+            const DAY16_REWARD = 200;
+            const AREA_AGENT_DAILY_CAP = 1000;
+            const AUTO_REPURCHASE_THRESHOLD = 6000;
+            
+            let baseTime = new Date($('#baseTime').text());
+            
+            // 性能优化：缓存机制
+            let teamOrdersCache = {};
+            let upperAgentsCache = {};
+            let teamHierarchyCache = {};
+            
+            // 显示消息函数
+            function showSuccessMessage(message) {
+                $('#successMessage').text(message);
+                const toast = new bootstrap.Toast(document.getElementById('successToast'));
+                toast.show();
+            }
+            
+            function showErrorMessage(message) {
+                $('#errorMessage').text(message);
+                const toast = new bootstrap.Toast(document.getElementById('errorToast'));
+                toast.show();
+            }
+            
+            // 加载动画控制
+            function showLoading(text = '正在处理，请稍候...') {
+                $('#loadingText').text(text);
+                $('#loadingOverlay').show();
+            }
+            
+            function updateLoading(progress, text) {
+                if (progress !== undefined) {
+                    $('#progressBar').css('width', progress + '%');
+                }
+                if (text) {
+                    $('#loadingText').text(text);
+                }
+            }
+            
+            function hideLoading() {
+                $('#loadingOverlay').hide();
+                $('#progressBar').css('width', '0%');
+            }
+            
+            // 清空缓存
+            function clearCache() {
+                teamOrdersCache = {};
+                upperAgentsCache = {};
+                teamHierarchyCache = {};
+            }
+            
+            // 日期格式化
+            function formatDate(date) {
+                if (!(date instanceof Date)) date = new Date(date);
+                let year = date.getFullYear();
+                let month = (date.getMonth() + 1).toString().padStart(2, '0');
+                let day = date.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            
+            function formatDateForOrderNo(date) {
+                let year = date.getFullYear();
+                let month = (date.getMonth() + 1).toString().padStart(2, '0');
+                let day = date.getDate().toString().padStart(2, '0');
+                return `${year}${month}${day}`;
+            }
+            
+            // 更新基准时间显示
+            function updateBaseTimeDisplay() {
+                $('#baseTime').text(formatDate(baseTime));
+                $('#registerTime').val(formatDate(baseTime));
+                $('#orderTime').val(formatDate(baseTime));
+                $('#rewardTime').val(formatDate(baseTime));
+            }
+            
+            // 获取最大ID
+            function getMaxId(arr) {
+                if (!arr || arr.length === 0) return 0;
+                return Math.max(...arr.map(item => item.id || 0));
+            }
+            
+            // 重新计算直推数量（优化版）
+            function recalculateDirectPush() {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                
+                // 重置直推数量
+                members.forEach(member => {
+                    member.directPush = 0;
+                });
+                
+                // 使用Map提高性能
+                let memberMap = new Map();
+                members.forEach(member => {
+                    memberMap.set(member.id, member);
+                });
+                
+                // 计算直推数量
+                members.forEach(member => {
+                    if (member.referrer) {
+                        let referrer = memberMap.get(member.referrer);
+                        if (referrer) {
+                            referrer.directPush = (referrer.directPush || 0) + 1;
+                        }
+                    }
+                });
+                
+                localStorage.setItem('members', JSON.stringify(members));
+                clearCache(); // 清空缓存
+                return members;
+            }
+            
+            // 检查区代资格（优化版）
+            function checkAreaAgentQualification(memberId) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let member = members.find(m => m.id === memberId);
+                
+                if (!member) return false;
+                if (member.isEmptyAccount) return false;
+                
+                let directMembers = members.filter(m => m.referrer === memberId && !m.isEmptyAccount);
+                if (directMembers.length < 3) return false;
+                
+                // 取前3个直属会员
+                let top3DirectMembers = directMembers.slice(0, 3);
+                let totalOrdersFrom3Markets = 0;
+                
+                // 使用缓存获取团队订单
+                top3DirectMembers.forEach(directMember => {
+                    let teamOrders = getTeamOrdersOptimized(directMember.id);
+                    totalOrdersFrom3Markets += teamOrders.length;
+                });
+                
+                return totalOrdersFrom3Markets >= 5;
+            }
+            
+            // 检查市代资格（优化版）
+            function checkCityAgentQualification(memberId) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let member = members.find(m => m.id === memberId);
+                
+                if (!member) return false;
+                if (member.isEmptyAccount) return false;
+                if (member.level !== '区代') return false;
+                
+                let directMembers = members.filter(m => m.referrer === memberId && !m.isEmptyAccount);
+                let areaAgentsInDirect = directMembers.filter(m => m.level === '区代');
+                if (areaAgentsInDirect.length < 3) return false;
+                
+                let teamPerformance = getTeamOrdersOptimized(memberId).length * ORDER_PRICE;
+                return teamPerformance >= 100000;
+            }
+            
+            // 获取团队订单（优化版 - 使用迭代代替递归）
+            function getTeamOrdersOptimized(memberId) {
+                // 检查缓存
+                if (teamOrdersCache[memberId]) {
+                    return teamOrdersCache[memberId];
+                }
+                
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                
+                // 使用迭代算法代替递归
+                let teamMemberIds = new Set([memberId]);
+                let queue = [memberId];
+                
+                while (queue.length > 0) {
+                    let currentId = queue.shift();
+                    // 使用filter查找直属会员（比find性能更好）
+                    for (let i = 0; i < members.length; i++) {
+                        let m = members[i];
+                        if (m.referrer === currentId && !m.isEmptyAccount && !teamMemberIds.has(m.id)) {
+                            teamMemberIds.add(m.id);
+                            queue.push(m.id);
+                        }
+                    }
+                }
+                
+                // 过滤订单
+                let teamOrders = orders.filter(o => teamMemberIds.has(o.memberId));
+                
+                // 缓存结果
+                teamOrdersCache[memberId] = teamOrders;
+                return teamOrders;
+            }
+            
+            // 计算累计业绩
+            function calculateTotalPerformance(memberId) {
+                let teamOrders = getTeamOrdersOptimized(memberId);
+                return teamOrders.length * ORDER_PRICE;
+            }
+            
+            // 同步奖励到会员（优化版）
+            function syncRewardsToMembers() {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                
+                // 创建会员映射以快速查找
+                let memberMap = new Map();
+                members.forEach(member => {
+                    // 初始化字段
+                    member.systemReward = 0;
+                    member.directReward = 0;
+                    member.areaReward = 0;
+                    member.peerReward = 0;
+                    member.cityReward = 0;
+                    member.greenPoints = 0;
+                    member.redPoints = 0;
+                    member.totalIncome = 0;
+                    memberMap.set(member.id, member);
+                });
+                
+                // 累加奖励
+                rewards.forEach(reward => {
+                    let member = memberMap.get(reward.memberId);
+                    if (member) {
+                        switch (reward.type) {
+                            case '系统奖励':
+                                member.systemReward += reward.amount;
+                                break;
+                            case '直推奖':
+                                member.directReward += reward.amount;
+                                break;
+                            case '区代奖':
+                                member.areaReward += reward.amount;
+                                break;
+                            case '平级奖':
+                                member.peerReward += reward.amount;
+                                break;
+                            case '市代奖':
+                                member.cityReward += reward.amount;
+                                break;
+                        }
+                        
+                        member.greenPoints += (reward.greenPoints || 0);
+                        member.redPoints += (reward.redPoints || 0);
+                        member.totalIncome += reward.amount;
+                    }
+                });
+                
+                // 更新订单数量
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                members.forEach(member => {
+                    // 使用filter计数
+                    member.orderCount = orders.filter(o => o.memberId === member.id).length;
+                    member.totalPerformance = calculateTotalPerformance(member.id);
+                });
+                
+                localStorage.setItem('members', JSON.stringify(members));
+                return members;
+            }
+            
+            // 自动升级会员
+            function autoUpgradeAllMembers() {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let upgraded = false;
+                
+                members.forEach(member => {
+                    if (member.isEmptyAccount) return;
+                    
+                    let oldLevel = member.level;
+                    
+                    if (checkCityAgentQualification(member.id) && member.level !== '市代') {
+                        member.level = '市代';
+                        upgraded = true;
+                    } else if (checkAreaAgentQualification(member.id) && member.level !== '区代' && member.level !== '市代') {
+                        member.level = '区代';
+                        upgraded = true;
+                    }
+                });
+                
+                if (upgraded) {
+                    localStorage.setItem('members', JSON.stringify(members));
+                    clearCache(); // 清空缓存
+                }
+                
+                return members;
+            }
+            
+            // 计算直推奖
+            function calculateDirectReward() {
+                return ORDER_PRICE * 0.05;
+            }
+            
+            // 计算区代奖（优化版，考虑每日封顶1000元，包括直推奖、平级奖、区代奖）
+            function calculateAreaReward(memberId, rewardDate) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                let member = members.find(m => m.id === memberId);
+                
+                if (!member || member.level !== '区代' || member.isEmptyAccount) return 0;
+                
+                // 计算该区代当日已获得的所有奖励（直推奖+平级奖+区代奖）总和
+                let todayTotal = rewards
+                    .filter(r => r.memberId === memberId && 
+                                r.rewardTime === rewardDate &&
+                                ['直推奖', '平级奖', '区代奖'].includes(r.type))
+                    .reduce((sum, r) => sum + r.amount, 0);
+                
+                // 区代奖金额（0.5%的订单金额）
+                let areaRewardAmount = ORDER_PRICE * 0.005;
+                
+                // 计算剩余额度
+                let remaining = AREA_AGENT_DAILY_CAP - todayTotal;
+                
+                return remaining > 0 ? Math.min(areaRewardAmount, remaining) : 0;
+            }
+            
+            // 计算市代奖
+            function calculateCityReward() {
+                return ORDER_PRICE * 0.03;
+            }
+            
+            // 分配积分
+            function allocatePoints(amount) {
+                return {
+                    green: amount * 0.75,
+                    red: amount * 0.25
+                };
+            }
+            
+            // 添加奖励记录（优化版）
+            function addRewardRecord(memberId, memberName, rewardType, rewardAmount, rewardTime, targetMemberId = '') {
+                if (rewardAmount <= 0) return null;
+                
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                let rewardId = getMaxId(rewards) + 1;
+                let points = allocatePoints(rewardAmount);
+                
+                let newReward = {
+                    id: rewardId,
+                    memberId: memberId,
+                    name: memberName,
+                    type: rewardType,
+                    amount: rewardAmount,
+                    greenPoints: points.green,
+                    redPoints: points.red,
+                    rewardTime: rewardTime,
+                    targetMemberId: targetMemberId
+                };
+                
+                rewards.push(newReward);
+                localStorage.setItem('rewards', JSON.stringify(rewards));
+                syncRewardsToMembers();
+                
+                return newReward;
+            }
+            
+            // 检查16天奖励
+            function check16DayRewardForOrders() {
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let currentDate = new Date($('#baseTime').text());
+                let rewardCount = 0;
+                
+                orders.forEach(order => {
+                    if (order.type === '复购订单') return;
+                    if (order.day16RewardStatus === '已发放') return;
+                    
+                    let orderDate = new Date(order.orderTime);
+                    let daysDiff = Math.floor((currentDate - orderDate) / (1000 * 60 * 60 * 24));
+                    
+                    if (daysDiff >= 16) {
+                        addRewardRecord(
+                            order.memberId,
+                            order.name,
+                            '系统奖励',
+                            DAY16_REWARD,
+                            formatDate(currentDate),
+                            order.id
+                        );
+                        
+                        order.day16RewardStatus = '已发放';
+                        rewardCount++;
+                    }
+                });
+                
+                localStorage.setItem('orders', JSON.stringify(orders));
+                refreshAllTables();
+                
+                if (rewardCount > 0) {
+                    showSuccessMessage(`已为 ${rewardCount} 个订单发放16天奖励，每单200元！`);
+                } else {
+                    showErrorMessage('当前没有可发放的16天奖励！');
+                }
+            }
+            
+            // 自动复购检查
+            function checkAutoRepurchase(memberId) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let member = members.find(m => m.id === memberId);
+                
+                if (!member) return;
+                if (!['区代', '市代'].includes(member.level) || member.isEmptyAccount) return;
+                if (member.greenPoints < AUTO_REPURCHASE_THRESHOLD) return;
+                
+                let today = formatDate(new Date());
+                let existingRepurchase = orders.find(o => 
+                    o.memberId === memberId && 
+                    o.type === '复购订单' && 
+                    o.orderTime === today
+                );
+                
+                if (existingRepurchase) return;
+                
+                let orderId = getMaxId(orders) + 1;
+                let orderNo = 'LG' + formatDateForOrderNo(new Date()) + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+                
+                let newOrder = {
+                    id: orderId,
+                    memberId: memberId,
+                    name: member.name,
+                    amount: ORDER_PRICE,
+                    type: '复购订单',
+                    orderNo: orderNo,
+                    orderTime: today,
+                    day16RewardStatus: '无'
+                };
+                
+                orders.push(newOrder);
+                localStorage.setItem('orders', JSON.stringify(orders));
+                
+                addRewardRecord(
+                    memberId,
+                    member.name,
+                    '直推奖',
+                    calculateDirectReward(),
+                    today,
+                    memberId
+                );
+                
+                showSuccessMessage(`会员【${member.name}】绿积分收益满${AUTO_REPURCHASE_THRESHOLD}元，已自动复购一单！`);
+                refreshAllTables();
+            }
+            
+            // 监控绿积分
+            function monitorGreenPoints() {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let warnings = [];
+                
+                members.forEach(member => {
+                    if (['区代', '市代'].includes(member.level) && !member.isEmptyAccount) {
+                        if (member.greenPoints >= AUTO_REPURCHASE_THRESHOLD) {
+                            warnings.push({
+                                id: member.id,
+                                name: member.name,
+                                greenPoints: member.greenPoints.toFixed(2)
+                            });
+                        }
+                    }
+                });
+                
+                if (warnings.length > 0) {
+                    $('#greenPointsMonitor').show();
+                    let alertText = warnings.map(w => 
+                        `<span class="green-points-warning">${w.name}(ID:${w.id})绿积分:${w.greenPoints}元</span>`
+                    ).join(' | ');
+                    $('#greenPointsAlert').html(alertText);
+                } else {
+                    $('#greenPointsMonitor').hide();
+                    $('#greenPointsAlert').empty();
+                }
+            }
+            
+            // 加载会员表格（优化版）
+            function loadMemberTable() {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let tbody = $('#memberTableBody');
+                tbody.empty();
+                
+                if(members.length === 0) {
+                    tbody.append('<tr><td colspan="20" class="text-center py-4">暂无会员数据</td></tr>');
+                    return;
+                }
+                
+                // 按ID倒序排列，让最新添加的显示在最上面
+                members.sort((a, b) => b.id - a.id);
+                
+                // 使用文档片段提高性能
+                let fragment = document.createDocumentFragment();
+                
+                members.forEach(member => {
+                    // 确保所有字段都有值
+                    member.directPush = member.directPush || 0;
+                    member.repurchaseTimes = member.repurchaseTimes || 0;
+                    member.orderCount = member.orderCount || 0;
+                    member.totalPerformance = member.totalPerformance || 0;
+                    member.systemReward = member.systemReward || 0;
+                    member.directReward = member.directReward || 0;
+                    member.areaReward = member.areaReward || 0;
+                    member.peerReward = member.peerReward || 0;
+                    member.cityReward = member.cityReward || 0;
+                    member.greenPoints = member.greenPoints || 0;
+                    member.redPoints = member.redPoints || 0;
+                    member.totalIncome = member.totalIncome || 0;
+                    member.level = member.level || '会员';
+                    member.isReinvest = member.isReinvest || false;
+                    member.isEmptyAccount = member.isEmptyAccount || false;
+                    
+                    let isReinvestText = member.isReinvest ? '是' : '否';
+                    let isEmptyAccountText = member.isEmptyAccount ? '<span class="badge bg-danger">是空号</span>' : '<span class="badge bg-success">非空号</span>';
+                    let totalIncome = (member.systemReward + member.directReward + member.areaReward + member.peerReward + member.cityReward).toFixed(2);
+                    
+                    let levelClass = '';
+                    if (member.level === '区代') levelClass = 'level-area';
+                    if (member.level === '市代') levelClass = 'level-city';
+                    
+                    let greenPointsCell = parseFloat(member.greenPoints).toFixed(2);
+                    if (['区代', '市代'].includes(member.level) && member.greenPoints >= AUTO_REPURCHASE_THRESHOLD) {
+                        greenPointsCell = `<span class="green-points-warning">${greenPointsCell}</span>`;
+                    }
+                    
+                    let row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <span class="member-link" data-id="${member.id}" style="cursor: pointer; color: #0d6efd; text-decoration: underline;">
+                                ${member.id}
+                            </span>
+                        </td>
+                        <td>${member.name}</td>
+                        <td>
+                            ${member.referrer ? 
+                                `<span class="member-link" data-id="${member.referrer}" style="cursor: pointer; color: #0d6efd; text-decoration: underline;">
+                                    ${member.referrer}
+                                </span>` : 
+                                '-'
+                            }
+                        </td>
+                        <td>${member.contactPerson || '-'}</td>
+                        <td>${member.directPush}</td>
+                        <td class="${levelClass}">${member.level}</td>
+                        <td>${member.repurchaseTimes}</td>
+                        <td>${isReinvestText}</td>
+                        <td>${member.totalPerformance.toLocaleString()}</td>
+                        <td>${parseFloat(member.systemReward).toFixed(2)}</td>
+                        <td>${parseFloat(member.directReward).toFixed(2)}</td>
+                        <td>${parseFloat(member.areaReward).toFixed(2)}</td>
+                        <td>${parseFloat(member.peerReward).toFixed(2)}</td>
+                        <td>${parseFloat(member.cityReward).toFixed(2)}</td>
+                        <td>${greenPointsCell}</td>
+                        <td>${parseFloat(member.redPoints).toFixed(2)}</td>
+                        <td>${totalIncome}</td>
+                        <td>${member.registerTime}</td>
+                        <td>${isEmptyAccountText}</td>
+                        <td class="operation-btn">
+                            <button class="btn btn-sm btn-warning edit-member" data-id="${member.id}">编辑</button>
+                            <button class="btn btn-sm btn-danger delete-member" data-id="${member.id}">删除</button>
+                            <button class="btn btn-sm btn-success quick-order" data-id="${member.id}" data-name="${member.name}">快速下单</button>
+                        </td>
+                    `;
+                    fragment.appendChild(row);
+                });
+                
+                tbody.append(fragment);
+            }
+            
+            // 加载订单表格（优化版）
+            function loadOrderTable() {
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let tbody = $('#orderTableBody');
+                tbody.empty();
+                
+                if(orders.length === 0) {
+                    tbody.append('<tr><td colspan="9" class="text-center py-4">暂无订单数据</td></tr>');
+                    return;
+                }
+                
+                // 按ID倒序排列，让最新添加的显示在最上面
+                orders.sort((a, b) => b.id - a.id);
+                
+                // 使用文档片段提高性能
+                let fragment = document.createDocumentFragment();
+                
+                orders.forEach(order => {
+                    let rewardStatus = order.day16RewardStatus || '未到时间';
+                    if (order.type === '复购订单') rewardStatus = '无';
+                    
+                    let statusBadge = '';
+                    if (rewardStatus === '已发放') {
+                        statusBadge = '<span class="badge bg-success">已发放</span>';
+                    } else if (rewardStatus === '未到时间') {
+                        statusBadge = '<span class="badge bg-warning">未到时间</span>';
+                    } else {
+                        statusBadge = '<span class="badge bg-secondary">无</span>';
+                    }
+                    
+                    let row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${order.id}</td>
+                        <td>${order.memberId}</td>
+                        <td>${order.name}</td>
+                        <td>${order.amount.toFixed(2)}</td>
+                        <td>${order.type}</td>
+                        <td>${order.orderNo}</td>
+                        <td>${order.orderTime}</td>
+                        <td>${statusBadge}</td>
+                        <td class="operation-btn">
+                            <button class="btn btn-sm btn-warning edit-order" data-id="${order.id}">编辑</button>
+                            <button class="btn btn-sm btn-danger delete-order" data-id="${order.id}">删除</button>
+                        </td>
+                    `;
+                    fragment.appendChild(row);
+                });
+                
+                tbody.append(fragment);
+            }
+            
+            // 加载奖励表格
+            function loadRewardTable() {
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                renderRewardTable(rewards);
+            }
+            
+            function renderRewardTable(rewards) {
+                let tbody = $('#rewardTableBody');
+                tbody.empty();
+                
+                if(rewards.length === 0) {
+                    tbody.append('<tr><td colspan="10" class="text-center py-4">暂无奖励数据</td></tr>');
+                    return;
+                }
+                
+                // 按ID倒序排列，让最新添加的显示在最上面
+                rewards.sort((a, b) => b.id - a.id);
+                
+                // 使用文档片段提高性能
+                let fragment = document.createDocumentFragment();
+                
+                rewards.forEach(reward => {
+                    let row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${reward.id}</td>
+                        <td>${reward.memberId}</td>
+                        <td>${reward.name}</td>
+                        <td>${reward.type}</td>
+                        <td>${reward.amount.toFixed(2)}</td>
+                        <td>${reward.greenPoints.toFixed(2)}</td>
+                        <td>${reward.redPoints.toFixed(2)}</td>
+                        <td>${reward.rewardTime}</td>
+                        <td>${reward.targetMemberId || '-'}</td>
+                        <td class="operation-btn">
+                            <button class="btn btn-sm btn-warning edit-reward" data-id="${reward.id}">编辑</button>
+                            <button class="btn btn-sm btn-danger delete-reward" data-id="${reward.id}">删除</button>
+                        </td>
+                    `;
+                    fragment.appendChild(row);
+                });
+                
+                tbody.append(fragment);
+            }
+            
+            // 刷新所有表格（优化版）
+            function refreshAllTables() {
+                // 清空缓存
+                clearCache();
+                
+                recalculateDirectPush();
+                syncRewardsToMembers();
+                autoUpgradeAllMembers();
+                monitorGreenPoints();
+                loadMemberTable();
+                loadOrderTable();
+                loadRewardTable();
+                refreshStatistics();
+            }
+            
+            // 刷新统计报表
+            function refreshStatistics() {
+                generateStatistics();
+            }
+            
+            // 生成统计数据
+            function generateStatistics() {
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                
+                // 1. 总体概览
+                let totalOrders = orders.length;
+                let totalRevenue = totalOrders * ORDER_PRICE;
+                let totalRewards = rewards.reduce((sum, r) => sum + r.amount, 0);
+                let totalMembers = members.length;
+                
+                $('#totalOrders').text(totalOrders);
+                $('#totalRevenue').text(totalRevenue.toLocaleString());
+                $('#totalRewards').text(totalRewards.toFixed(2));
+                $('#totalMembers').text(totalMembers);
+                
+                // 2. 奖励类型分布
+                let rewardTypeStats = {};
+                rewards.forEach(reward => {
+                    if (!rewardTypeStats[reward.type]) {
+                        rewardTypeStats[reward.type] = {
+                            count: 0,
+                            amount: 0
+                        };
+                    }
+                    rewardTypeStats[reward.type].count++;
+                    rewardTypeStats[reward.type].amount += reward.amount;
+                });
+                
+                let rewardTypeTbody = $('#rewardTypeStats');
+                rewardTypeTbody.empty();
+                let totalRewardAmount = totalRewards;
+                
+                Object.keys(rewardTypeStats).forEach(type => {
+                    let stats = rewardTypeStats[type];
+                    let percentage = totalRewardAmount > 0 ? (stats.amount / totalRewardAmount * 100).toFixed(2) : 0;
+                    
+                    rewardTypeTbody.append(`
+                        <tr>
+                            <td>${type}</td>
+                            <td>${stats.count}</td>
+                            <td>${stats.amount.toFixed(2)}</td>
+                            <td>${percentage}%</td>
+                        </tr>
+                    `);
+                });
+                
+                // 3. 每日统计
+                let dailyStats = {};
+                orders.forEach(order => {
+                    let date = order.orderTime;
+                    if (!dailyStats[date]) {
+                        dailyStats[date] = {
+                            orders: 0,
+                            revenue: 0,
+                            rewards: 0,
+                            rewardAmount: 0
+                        };
+                    }
+                    dailyStats[date].orders++;
+                    dailyStats[date].revenue += order.amount;
+                });
+                
+                rewards.forEach(reward => {
+                    let date = reward.rewardTime;
+                    if (!dailyStats[date]) {
+                        dailyStats[date] = {
+                            orders: 0,
+                            revenue: 0,
+                            rewards: 0,
+                            rewardAmount: 0
+                        };
+                    }
+                    dailyStats[date].rewards++;
+                    dailyStats[date].rewardAmount += reward.amount;
+                });
+                
+                // 按日期排序
+                let sortedDates = Object.keys(dailyStats).sort();
+                let dailyStatsTbody = $('#dailyStatsTable');
+                dailyStatsTbody.empty();
+                
+                let dailyTotalOrders = 0;
+                let dailyTotalRevenue = 0;
+                let dailyTotalRewards = 0;
+                let dailyTotalRewardAmount = 0;
+                
+                sortedDates.forEach(date => {
+                    let stats = dailyStats[date];
+                    dailyTotalOrders += stats.orders;
+                    dailyTotalRevenue += stats.revenue;
+                    dailyTotalRewards += stats.rewards;
+                    dailyTotalRewardAmount += stats.rewardAmount;
+                    
+                    dailyStatsTbody.append(`
+                        <tr>
+                            <td>${date}</td>
+                            <td>${stats.orders}</td>
+                            <td>${stats.revenue.toFixed(2)}</td>
+                            <td>${stats.rewards}</td>
+                            <td>${stats.rewardAmount.toFixed(2)}</td>
+                        </tr>
+                    `);
+                });
+                
+                $('#dailyTotalOrders').text(dailyTotalOrders);
+                $('#dailyTotalRevenue').text(dailyTotalRevenue.toFixed(2));
+                $('#dailyTotalRewards').text(dailyTotalRewards);
+                $('#dailyTotalRewardAmount').text(dailyTotalRewardAmount.toFixed(2));
+                
+                // 4. 详细统计表
+                let detailedStats = {};
+                let totalNormalOrders = 0;
+                let totalRepurchaseOrders = 0;
+                let total16DayRewards = 0;
+                let totalSystemRewards = 0;
+                let totalDirectRewards = 0;
+                let totalAreaRewards = 0;
+                let totalPeerRewards = 0;
+                let totalCityRewards = 0;
+                let totalGreenPoints = 0;
+                let totalRedPoints = 0;
+                
+                // 订单统计
+                orders.forEach(order => {
+                    let date = order.orderTime;
+                    if (!detailedStats[date]) {
+                        detailedStats[date] = {
+                            normalOrders: 0,
+                            repurchaseOrders: 0,
+                            totalOrders: 0,
+                            totalAmount: 0,
+                            day16Rewards: 0,
+                            systemRewards: 0,
+                            directRewards: 0,
+                            areaRewards: 0,
+                            peerRewards: 0,
+                            cityRewards: 0,
+                            totalRewards: 0,
+                            greenPoints: 0,
+                            redPoints: 0
+                        };
+                    }
+                    
+                    if (order.type === '普通订单') {
+                        detailedStats[date].normalOrders++;
+                        totalNormalOrders++;
+                    } else {
+                        detailedStats[date].repurchaseOrders++;
+                        totalRepurchaseOrders++;
+                    }
+                    detailedStats[date].totalOrders++;
+                    detailedStats[date].totalAmount += order.amount;
+                    
+                    // 16天奖励
+                    if (order.day16RewardStatus === '已发放') {
+                        detailedStats[date].day16Rewards += DAY16_REWARD;
+                        total16DayRewards += DAY16_REWARD;
+                        detailedStats[date].systemRewards += DAY16_REWARD;
+                        totalSystemRewards += DAY16_REWARD;
+                    }
+                });
+                
+                // 奖励统计
+                rewards.forEach(reward => {
+                    let date = reward.rewardTime;
+                    if (!detailedStats[date]) {
+                        detailedStats[date] = {
+                            normalOrders: 0,
+                            repurchaseOrders: 0,
+                            totalOrders: 0,
+                            totalAmount: 0,
+                            day16Rewards: 0,
+                            systemRewards: 0,
+                            directRewards: 0,
+                            areaRewards: 0,
+                            peerRewards: 0,
+                            cityRewards: 0,
+                            totalRewards: 0,
+                            greenPoints: 0,
+                            redPoints: 0
+                        };
+                    }
+                    
+                    switch(reward.type) {
+                        case '系统奖励':
+                            detailedStats[date].systemRewards += reward.amount;
+                            totalSystemRewards += reward.amount;
+                            break;
+                        case '直推奖':
+                            detailedStats[date].directRewards += reward.amount;
+                            totalDirectRewards += reward.amount;
+                            break;
+                        case '区代奖':
+                            detailedStats[date].areaRewards += reward.amount;
+                            totalAreaRewards += reward.amount;
+                            break;
+                        case '平级奖':
+                            detailedStats[date].peerRewards += reward.amount;
+                            totalPeerRewards += reward.amount;
+                            break;
+                        case '市代奖':
+                            detailedStats[date].cityRewards += reward.amount;
+                            totalCityRewards += reward.amount;
+                            break;
+                    }
+                    
+                    detailedStats[date].totalRewards += reward.amount;
+                    detailedStats[date].greenPoints += reward.greenPoints;
+                    detailedStats[date].redPoints += reward.redPoints;
+                    totalGreenPoints += reward.greenPoints;
+                    totalRedPoints += reward.redPoints;
+                });
+                
+                // 生成详细统计表
+                let sortedDetailedDates = Object.keys(detailedStats).sort();
+                let detailedStatsTbody = $('#detailedStatsTable');
+                detailedStatsTbody.empty();
+                
+                sortedDetailedDates.forEach(date => {
+                    let stats = detailedStats[date];
+                    detailedStatsTbody.append(`
+                        <tr>
+                            <td>${date}</td>
+                            <td>${stats.normalOrders}</td>
+                            <td>${stats.repurchaseOrders}</td>
+                            <td>${stats.totalOrders}</td>
+                            <td>${stats.totalAmount.toFixed(2)}</td>
+                            <td>${stats.day16Rewards.toFixed(2)}</td>
+                            <td>${stats.systemRewards.toFixed(2)}</td>
+                            <td>${stats.directRewards.toFixed(2)}</td>
+                            <td>${stats.areaRewards.toFixed(2)}</td>
+                            <td>${stats.peerRewards.toFixed(2)}</td>
+                            <td>${stats.cityRewards.toFixed(2)}</td>
+                            <td>${stats.totalRewards.toFixed(2)}</td>
+                            <td>${stats.greenPoints.toFixed(2)}</td>
+                            <td>${stats.redPoints.toFixed(2)}</td>
+                        </tr>
+                    `);
+                });
+                
+                // 更新总计行
+                $('#totalNormalOrders').text(totalNormalOrders);
+                $('#totalRepurchaseOrders').text(totalRepurchaseOrders);
+                $('#totalAllOrders').text(totalNormalOrders + totalRepurchaseOrders);
+                $('#totalAllRevenue').text((totalNormalOrders + totalRepurchaseOrders) * ORDER_PRICE);
+                $('#total16DayRewards').text(total16DayRewards.toFixed(2));
+                $('#totalSystemRewards').text(totalSystemRewards.toFixed(2));
+                $('#totalDirectRewards').text(totalDirectRewards.toFixed(2));
+                $('#totalAreaRewards').text(totalAreaRewards.toFixed(2));
+                $('#totalPeerRewards').text(totalPeerRewards.toFixed(2));
+                $('#totalCityRewards').text(totalCityRewards.toFixed(2));
+                $('#totalAllRewards').text((totalSystemRewards + totalDirectRewards + totalAreaRewards + totalPeerRewards + totalCityRewards).toFixed(2));
+                $('#totalGreenPoints').text(totalGreenPoints.toFixed(2));
+                $('#totalRedPoints').text(totalRedPoints.toFixed(2));
+                
+                // 5. 会员级别分布
+                let levelStats = {
+                    '会员': { count: 0, totalPerformance: 0 },
+                    '区代': { count: 0, totalPerformance: 0 },
+                    '市代': { count: 0, totalPerformance: 0 }
+                };
+                
+                members.forEach(member => {
+                    if (levelStats[member.level]) {
+                        levelStats[member.level].count++;
+                        levelStats[member.level].totalPerformance += member.totalPerformance || 0;
+                    }
+                });
+                
+                let levelStatsTbody = $('#memberLevelStats');
+                levelStatsTbody.empty();
+                
+                Object.keys(levelStats).forEach(level => {
+                    let stats = levelStats[level];
+                    let percentage = totalMembers > 0 ? (stats.count / totalMembers * 100).toFixed(2) : 0;
+                    let avgPerformance = stats.count > 0 ? (stats.totalPerformance / stats.count).toFixed(2) : 0;
+                    
+                    levelStatsTbody.append(`
+                        <tr>
+                            <td>${level}</td>
+                            <td>${stats.count}</td>
+                            <td>${percentage}%</td>
+                            <td>${parseFloat(avgPerformance).toLocaleString()}</td>
+                        </tr>
+                    `);
+                });
+                
+                // 6. 收益排行榜
+                let sortedMembers = [...members]
+                    .filter(m => m.totalIncome > 0)
+                    .sort((a, b) => b.totalIncome - a.totalIncome)
+                    .slice(0, 10);
+                
+                let incomeRankingTbody = $('#incomeRankingTable');
+                incomeRankingTbody.empty();
+                
+                sortedMembers.forEach((member, index) => {
+                    incomeRankingTbody.append(`
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${member.id}</td>
+                            <td>${member.name}</td>
+                            <td>${member.level}</td>
+                            <td>${member.totalIncome.toFixed(2)}</td>
+                        </tr>
+                    `);
+                });
+            }
+            
+            // ================ 优化后的计算函数 ================
+            
+            // 获取上级区代（优化版 - 避免递归）
+            function getUpperAreaAgentsOptimized(memberId) {
+                const cacheKey = `area_${memberId}`;
+                if (upperAgentsCache[cacheKey]) {
+                    return upperAgentsCache[cacheKey];
+                }
+                
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let agentIds = new Set();
+                
+                // 向上查找区代
+                let currentId = memberId;
+                let visited = new Set();
+                
+                while (currentId) {
+                    if (visited.has(currentId)) break;
+                    visited.add(currentId);
+                    
+                    let member = members.find(m => m.id === currentId);
+                    if (!member || !member.referrer) break;
+                    
+                    let referrerId = member.referrer;
+                    let referrer = members.find(m => m.id === referrerId);
+                    
+                    if (referrer && referrer.level === '区代' && !referrer.isEmptyAccount) {
+                        agentIds.add(referrerId);
+                    }
+                    
+                    currentId = referrerId;
+                }
+                
+                let result = Array.from(agentIds);
+                upperAgentsCache[cacheKey] = result;
+                return result;
+            }
+            
+            // 获取上级市代（优化版）
+            function getUpperCityAgentsOptimized(memberId) {
+                const cacheKey = `city_${memberId}`;
+                if (upperAgentsCache[cacheKey]) {
+                    return upperAgentsCache[cacheKey];
+                }
+                
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let agentIds = new Set();
+                
+                // 向上查找市代
+                let currentId = memberId;
+                let visited = new Set();
+                
+                while (currentId) {
+                    if (visited.has(currentId)) break;
+                    visited.add(currentId);
+                    
+                    let member = members.find(m => m.id === currentId);
+                    if (!member || !member.referrer) break;
+                    
+                    let referrerId = member.referrer;
+                    let referrer = members.find(m => m.id === referrerId);
+                    
+                    if (referrer && referrer.level === '市代' && !referrer.isEmptyAccount) {
+                        agentIds.add(referrerId);
+                    }
+                    
+                    currentId = referrerId;
+                }
+                
+                let result = Array.from(agentIds);
+                upperAgentsCache[cacheKey] = result;
+                return result;
+            }
+            
+            // 获取上级区代（用于平级奖 - 优化版）
+            function getUpperAreaAgentForPeerRewardOptimized(memberId) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let member = members.find(m => m.id === memberId);
+                if (!member) return null;
+                
+                let referrerId = member.referrer;
+                let visited = new Set();
+                
+                while (referrerId) {
+                    if (visited.has(referrerId)) break;
+                    visited.add(referrerId);
+                    
+                    let referrer = members.find(m => m.id === referrerId);
+                    if (referrer && referrer.level === '区代' && !referrer.isEmptyAccount) {
+                        return referrerId;
+                    }
+                    referrerId = referrer ? referrer.referrer : null;
+                }
+                
+                return null;
+            }
+            
+            // ================ 搜索功能 ================
+            
+            // 搜索会员函数
+            function searchMembers() {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let searchId = $('#searchMemberId').val().trim();
+                let searchName = $('#searchMemberName').val().trim();
+                let filterLevel = $('#filterMemberLevel').val();
+                
+                // 清空之前的搜索结果
+                $('#searchResults').hide();
+                $('#memberTree').empty();
+                
+                // 如果没有搜索条件，显示所有会员
+                if (!searchId && !searchName && !filterLevel) {
+                    loadMemberTable();
+                    return;
+                }
+                
+                // 筛选会员
+                let filteredMembers = members.filter(member => {
+                    if (searchId && member.id !== parseInt(searchId)) return false;
+                    if (searchName && !member.name.includes(searchName)) return false;
+                    if (filterLevel && member.level !== filterLevel) return false;
+                    return true;
+                });
+                
+                if (filteredMembers.length === 0) {
+                    $('#memberTree').html('<div class="text-center py-4">未找到符合条件的会员</div>');
+                    $('#searchResults').show();
+                    return;
+                }
+                
+                // 如果只搜索一个会员，显示该会员的下线结构
+                if (searchId && !searchName && !filterLevel) {
+                    let memberId = parseInt(searchId);
+                    displayMemberTree(memberId);
+                } else {
+                    // 显示搜索结果列表
+                    displaySearchResults(filteredMembers);
+                }
+                
+                $('#searchResults').show();
+            }
+            
+            // 显示搜索结果列表
+            function displaySearchResults(members) {
+                let treeHtml = '<div class="mb-3"><strong>找到 ' + members.length + ' 个会员：</strong></div>';
+                
+                members.forEach(member => {
+                    let levelClass = '';
+                    if (member.level === '区代') levelClass = 'level-area';
+                    if (member.level === '市代') levelClass = 'level-city';
+                    
+                    treeHtml += `
+                        <div class="tree-node level-1">
+                            <span class="member-link" data-id="${member.id}">
+                                ID: ${member.id} | 姓名: ${member.name} | 级别: <span class="${levelClass}">${member.level}</span>
+                            </span>
+                            <button class="btn btn-sm btn-info float-end view-subordinates" data-id="${member.id}">查看下线</button>
+                        </div>
+                    `;
+                });
+                
+                $('#memberTree').html(treeHtml);
+            }
+            
+            // 显示会员树形结构（下线会员）
+            function displayMemberTree(rootMemberId) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let rootMember = members.find(m => m.id === rootMemberId);
+                
+                if (!rootMember) {
+                    $('#memberTree').html('<div class="text-center py-4">会员不存在</div>');
+                    return;
+                }
+                
+                // 构建树形结构
+                let treeHtml = `
+                    <div class="mb-3">
+                        <strong>会员结构树 (根节点: ${rootMember.name} ID:${rootMember.id})</strong>
+                        <button class="btn btn-sm btn-outline-secondary float-end" id="collapseAllBtn">折叠全部</button>
+                        <button class="btn btn-sm btn-outline-secondary float-end me-2" id="expandAllBtn">展开全部</button>
+                    </div>
+                `;
+                
+                // 递归函数构建树
+                function buildTree(memberId, level) {
+                    let member = members.find(m => m.id === memberId);
+                    if (!member) return '';
+                    
+                    let levelClass = `level-${Math.min(level, 5)}`;
+                    let memberLevelClass = '';
+                    if (member.level === '区代') memberLevelClass = 'level-area';
+                    if (member.level === '市代') memberLevelClass = 'level-city';
+                    
+                    // 获取直推会员
+                    let directMembers = members.filter(m => m.referrer === memberId);
+                    
+                    let html = `
+                        <div class="tree-node ${levelClass}">
+                            <span class="member-link" data-id="${member.id}">
+                                ${member.id} | ${member.name} | 
+                                <span class="${memberLevelClass}">${member.level}</span> | 
+                                直推: ${directMembers.length}
+                            </span>
+                    `;
+                    
+                    if (directMembers.length > 0) {
+                        html += `<button class="btn btn-sm btn-outline-primary float-end toggle-btn" data-id="${member.id}">展开</button>`;
+                        html += `<div id="subtree-${member.id}" class="subtree" style="display: none;">`;
+                        directMembers.forEach(subMember => {
+                            html += buildTree(subMember.id, level + 1);
+                        });
+                        html += '</div>';
+                    }
+                    
+                    html += '</div>';
+                    return html;
+                }
+                
+                treeHtml += buildTree(rootMemberId, 1);
+                $('#memberTree').html(treeHtml);
+                
+                // 添加切换按钮事件
+                $('.toggle-btn').click(function() {
+                    let memberId = $(this).data('id');
+                    let subtree = $('#subtree-' + memberId);
+                    if (subtree.is(':visible')) {
+                        subtree.hide();
+                        $(this).text('展开');
+                    } else {
+                        subtree.show();
+                        $(this).text('折叠');
+                    }
+                });
+                
+                // 展开全部按钮
+                $('#expandAllBtn').click(function() {
+                    $('.subtree').show();
+                    $('.toggle-btn').text('折叠');
+                });
+                
+                // 折叠全部按钮
+                $('#collapseAllBtn').click(function() {
+                    $('.subtree').hide();
+                    $('.toggle-btn').text('展开');
+                });
+            }
+            
+            // ================ 优化后的下单函数 ================
+            
+            // 为会员快速下单
+            $(document).on('click', '.quick-order', async function() {
+                let memberId = $(this).data('id');
+                let memberName = $(this).data('name');
+                
+                if (!memberId) {
+                    showErrorMessage('会员ID不能为空！');
+                    return;
+                }
+                
+                if (confirm(`确定要为会员【${memberName}】(ID:${memberId})快速下单吗？`)) {
+                    showLoading('开始创建订单...');
+                    updateLoading(10, '验证会员信息...');
+                    
+                    try {
+                        // 使用setTimeout分解任务，避免阻塞UI
+                        setTimeout(async () => {
+                            await createQuickOrderOptimized(memberId, memberName);
+                        }, 100);
+                    } catch (error) {
+                        showErrorMessage('下单失败：' + error.message);
+                        console.error(error);
+                        hideLoading();
+                    }
+                }
+            });
+            
+            // 优化后的快速下单函数
+            async function createQuickOrderOptimized(memberId, memberName) {
+                updateLoading(20, '读取数据...');
+                
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                
+                // 验证会员
+                let member = members.find(m => m.id === memberId);
+                if (!member) {
+                    hideLoading();
+                    showErrorMessage('会员不存在！');
+                    return;
+                }
+                
+                updateLoading(30, '创建订单记录...');
+                
+                let orderId = getMaxId(orders) + 1;
+                let orderNo = 'LG' + formatDateForOrderNo(new Date()) + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+                let orderType = '普通订单';
+                let orderTime = formatDate(baseTime);
+                
+                let newOrder = {
+                    id: orderId,
+                    memberId: memberId,
+                    name: memberName,
+                    amount: ORDER_PRICE,
+                    type: orderType,
+                    orderNo: orderNo,
+                    orderTime: orderTime,
+                    day16RewardStatus: '未到时间'
+                };
+                
+                orders.push(newOrder);
+                localStorage.setItem('orders', JSON.stringify(orders));
+                
+                updateLoading(40, '更新会员状态...');
+                
+                // 更新会员状态（不再是空号）
+                member.isEmptyAccount = false;
+                member.orderCount = (member.orderCount || 0) + 1;
+                localStorage.setItem('members', JSON.stringify(members));
+                
+                updateLoading(50, '计算奖励...');
+                
+                // 异步计算奖励
+                await calculateOrderRewardsOptimized(memberId, orderTime, memberName);
+                
+                updateLoading(80, '刷新界面...');
+                
+                // 使用setTimeout延迟刷新，让UI有机会更新
+                setTimeout(() => {
+                    refreshAllTables();
+                    updateLoading(100, '下单完成！');
+                    
+                    setTimeout(() => {
+                        hideLoading();
+                        showSuccessMessage(`为会员【${memberName}】快速下单成功！订单编号：${newOrder.orderNo}`);
+                    }, 500);
+                }, 300);
+            }
+            
+            // 优化后的计算订单奖励函数
+            async function calculateOrderRewardsOptimized(memberId, orderTime, memberName) {
+                return new Promise((resolve) => {
+                    // 分解任务，避免长时间阻塞
+                    setTimeout(() => {
+                        updateLoading(55, '计算直推奖...');
+                        calculateDirectRewards(memberId, orderTime);
+                        
+                        setTimeout(() => {
+                            updateLoading(60, '计算区代奖...');
+                            calculateAreaRewards(memberId, orderTime);
+                            
+                            setTimeout(() => {
+                                updateLoading(65, '计算平级奖...');
+                                calculatePeerRewards(memberId, orderTime);
+                                
+                                setTimeout(() => {
+                                    updateLoading(70, '计算市代奖...');
+                                    calculateCityRewards(memberId, orderTime);
+                                    
+                                    setTimeout(() => {
+                                        updateLoading(75, '检查自动复购...');
+                                        checkAutoRepurchase(memberId);
+                                        resolve();
+                                    }, 100);
+                                }, 100);
+                            }, 100);
+                        }, 100);
+                    }, 100);
+                });
+            }
+            
+            // 分解的计算函数
+            function calculateDirectRewards(memberId, orderTime) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                let member = members.find(m => m.id === memberId);
+                if (!member) return;
+                
+                // 直推奖（给推荐人）
+                if (member.referrer) {
+                    let referrer = members.find(m => m.id === member.referrer);
+                    if (referrer && !referrer.isEmptyAccount) {
+                        let directRewardAmount = calculateDirectReward(); // 5%的订单金额
+                        
+                        // 如果推荐人是区代，需要考虑每日封顶
+                        if (referrer.level === '区代') {
+                            // 计算该区代当日已获得的所有奖励（直推奖+平级奖+区代奖）总和
+                            let todayTotal = rewards
+                                .filter(r => r.memberId === referrer.id && 
+                                            r.rewardTime === orderTime &&
+                                            ['直推奖', '平级奖', '区代奖'].includes(r.type))
+                                .reduce((sum, r) => sum + r.amount, 0);
+                            
+                            // 计算剩余额度
+                            let remaining = AREA_AGENT_DAILY_CAP - todayTotal;
+                            
+                            if (remaining > 0) {
+                                let actualReward = Math.min(directRewardAmount, remaining);
+                                addRewardRecord(
+                                    referrer.id,
+                                    referrer.name,
+                                    '直推奖',
+                                    actualReward,
+                                    orderTime,
+                                    memberId
+                                );
+                            }
+                        } else {
+                            // 非区代，正常发放
+                            addRewardRecord(
+                                referrer.id,
+                                referrer.name,
+                                '直推奖',
+                                directRewardAmount,
+                                orderTime,
+                                memberId
+                            );
+                        }
+                    }
+                }
+            }
+            
+            function calculateAreaRewards(memberId, orderTime) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                
+                // 区代奖和平级奖
+                let areaAgents = getUpperAreaAgentsOptimized(memberId);
+                areaAgents.forEach(agentId => {
+                    let agent = members.find(m => m.id === agentId);
+                    if (agent && !agent.isEmptyAccount && agent.level === '区代') {
+                        let areaReward = calculateAreaReward(agentId, orderTime);
+                        if (areaReward > 0) {
+                            addRewardRecord(
+                                agentId,
+                                agent.name,
+                                '区代奖',
+                                areaReward,
+                                orderTime,
+                                memberId
+                            );
+                        }
+                    }
+                });
+            }
+            
+            function calculatePeerRewards(memberId, orderTime) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                
+                // 平级奖（修改点1：平级奖是下面区代的区代奖的100%）
+                let areaAgents = getUpperAreaAgentsOptimized(memberId);
+                areaAgents.forEach(agentId => {
+                    let agent = members.find(m => m.id === agentId);
+                    if (agent && !agent.isEmptyAccount && agent.level === '区代') {
+                        // 获取上级区代（平级奖的发放对象）
+                        let upperAreaAgentId = getUpperAreaAgentForPeerRewardOptimized(agentId);
+                        if (upperAreaAgentId) {
+                            let upperAgent = members.find(m => m.id === upperAreaAgentId);
+                            if (upperAgent && upperAgent.level === '区代' && !upperAgent.isEmptyAccount) {
+                                // 计算该区代（agent）当天已经获得的区代奖总额
+                                let areaRewardToday = rewards
+                                    .filter(r => r.memberId === agentId && 
+                                                r.rewardTime === orderTime &&
+                                                r.type === '区代奖')
+                                    .reduce((sum, r) => sum + r.amount, 0);
+                                
+                                // 平级奖 = 区代奖的100%
+                                let peerRewardAmount = areaRewardToday;
+                                
+                                // 计算上级区代当日已获得的所有奖励（直推奖+平级奖+区代奖）总和
+                                let todayTotal = rewards
+                                    .filter(r => r.memberId === upperAreaAgentId && 
+                                                r.rewardTime === orderTime &&
+                                                ['直推奖', '平级奖', '区代奖'].includes(r.type))
+                                    .reduce((sum, r) => sum + r.amount, 0);
+                                
+                                // 计算剩余额度
+                                let remaining = AREA_AGENT_DAILY_CAP - todayTotal;
+                                
+                                if (remaining > 0 && peerRewardAmount > 0) {
+                                    let actualReward = Math.min(peerRewardAmount, remaining);
+                                    addRewardRecord(
+                                        upperAreaAgentId,
+                                        upperAgent.name,
+                                        '平级奖',
+                                        actualReward,
+                                        orderTime,
+                                        agentId
+                                    );
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function calculateCityRewards(memberId, orderTime) {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                
+                // 市代奖
+                let cityAgents = getUpperCityAgentsOptimized(memberId);
+                cityAgents.forEach(agentId => {
+                    let agent = members.find(m => m.id === agentId);
+                    if (agent && !agent.isEmptyAccount && agent.level === '市代') {
+                        let cityReward = calculateCityReward();
+                        addRewardRecord(
+                            agentId,
+                            agent.name,
+                            '市代奖',
+                            cityReward,
+                            orderTime,
+                            memberId
+                        );
+                    }
+                });
+            }
+            
+            // ================ 事件绑定 ================
+            
+            $('#minusDay').click(function() {
+                baseTime.setDate(baseTime.getDate() - 1);
+                updateBaseTimeDisplay();
+            });
+            
+            $('#addDay').click(function() {
+                baseTime.setDate(baseTime.getDate() + 1);
+                updateBaseTimeDisplay();
+            });
+            
+            $('#check16DayReward').click(function() {
+                check16DayRewardForOrders();
+            });
+            
+            $('#createDemoData').click(function() {
+                if (confirm('确定要创建演示数据吗？这将添加13个会员（1推3，3推9结构）和一些订单奖励数据。')) {
+                    showLoading('正在创建演示数据...');
+                    setTimeout(() => {
+                        createDemoData();
+                        hideLoading();
+                    }, 100);
+                }
+            });
+            
+            // 搜索按钮点击事件
+            $('#searchMemberBtn').click(function() {
+                searchMembers();
+            });
+            
+            // 清空搜索按钮
+            $('#clearSearchBtn').click(function() {
+                $('#searchMemberId').val('');
+                $('#searchMemberName').val('');
+                $('#filterMemberLevel').val('');
+                $('#searchResults').hide();
+                loadMemberTable();
+            });
+            
+            // 点击会员ID查看下线
+            $(document).on('click', '.member-link', function(e) {
+                e.stopPropagation();
+                let memberId = $(this).data('id');
+                if (memberId) {
+                    // 填充搜索框并搜索
+                    $('#searchMemberId').val(memberId);
+                    $('#searchMemberName').val('');
+                    $('#filterMemberLevel').val('');
+                    searchMembers();
+                    
+                    // 切换到会员标签页（如果不在的话）
+                    $('button[data-bs-target="#member"]').tab('show');
+                }
+            });
+            
+            // 查看下线按钮
+            $(document).on('click', '.view-subordinates', function(e) {
+                e.stopPropagation();
+                let memberId = $(this).data('id');
+                $('#searchMemberId').val(memberId);
+                $('#searchMemberName').val('');
+                $('#filterMemberLevel').val('');
+                searchMembers();
+            });
+            
+            // 搜索框回车事件
+            $('#searchMemberId, #searchMemberName').keypress(function(e) {
+                if (e.which === 13) { // Enter键
+                    searchMembers();
+                }
+            });
+            
+            // 创建演示数据
+            function createDemoData() {
+                let members = [];
+                let orders = [];
+                let rewards = [];
+                
+                // 根节点（推荐人）
+                let rootMember = {
+                    id: 1,
+                    name: '张三',
+                    referrer: '',
+                    contactPerson: '',
+                    directPush: 0,
+                    level: '会员',
+                    repurchaseTimes: 0,
+                    orderCount: 1,
+                    totalPerformance: ORDER_PRICE,
+                    systemReward: 0,
+                    directReward: 0,
+                    areaReward: 0,
+                    peerReward: 0,
+                    cityReward: 0,
+                    greenPoints: 0,
+                    redPoints: 0,
+                    totalIncome: 0,
+                    registerTime: '2025-09-01',
+                    isReinvest: false,
+                    isEmptyAccount: false
+                };
+                members.push(rootMember);
+                
+                // 第一层（3个直接推荐）
+                let firstLayerNames = ['李四', '王五', '赵六'];
+                for (let i = 0; i < 3; i++) {
+                    let member = {
+                        id: i + 2,
+                        name: firstLayerNames[i],
+                        referrer: 1,
+                        contactPerson: 1,
+                        directPush: 3,
+                        level: i === 0 ? '区代' : '会员',
+                        repurchaseTimes: 0,
+                        orderCount: 1,
+                        totalPerformance: ORDER_PRICE,
+                        systemReward: 0,
+                        directReward: 0,
+                        areaReward: 0,
+                        peerReward: 0,
+                        cityReward: 0,
+                        greenPoints: 0,
+                        redPoints: 0,
+                        totalIncome: 0,
+                        registerTime: '2025-09-02',
+                        isReinvest: false,
+                        isEmptyAccount: false
+                    };
+                    members.push(member);
+                }
+                
+                // 第二层（9个会员）
+                let secondLayerNames = ['钱七', '孙八', '周九', '吴十', '郑十一', '王十二', '冯十三', '陈十四', '褚十五'];
+                let referrerIds = [2, 2, 2, 3, 3, 3, 4, 4, 4];
+                
+                for (let i = 0; i < 9; i++) {
+                    let member = {
+                        id: i + 5,
+                        name: secondLayerNames[i],
+                        referrer: referrerIds[i],
+                        contactPerson: referrerIds[i],
+                        directPush: 0,
+                        level: '会员',
+                        repurchaseTimes: 0,
+                        orderCount: i < 3 ? 1 : 0,
+                        totalPerformance: i < 3 ? ORDER_PRICE : 0,
+                        systemReward: 0,
+                        directReward: 0,
+                        areaReward: 0,
+                        peerReward: 0,
+                        cityReward: 0,
+                        greenPoints: i < 3 ? 149.85 : 0,
+                        redPoints: i < 3 ? 49.95 : 0,
+                        totalIncome: 0,
+                        registerTime: '2025-09-03',
+                        isReinvest: false,
+                        isEmptyAccount: i >= 3
+                    };
+                    members.push(member);
+                }
+                
+                // 创建订单
+                let demoOrders = [
+                    { id: 1, memberId: 1, name: '张三', amount: ORDER_PRICE, type: '普通订单', orderTime: '2025-09-01', day16RewardStatus: '已发放' },
+                    { id: 2, memberId: 2, name: '李四', amount: ORDER_PRICE, type: '普通订单', orderTime: '2025-09-02', day16RewardStatus: '已发放' },
+                    { id: 3, memberId: 3, name: '王五', amount: ORDER_PRICE, type: '普通订单', orderTime: '2025-09-02', day16RewardStatus: '已发放' },
+                    { id: 4, memberId: 4, name: '赵六', amount: ORDER_PRICE, type: '普通订单', orderTime: '2025-09-02', day16RewardStatus: '已发放' },
+                    { id: 5, memberId: 5, name: '钱七', amount: ORDER_PRICE, type: '普通订单', orderTime: '2025-09-03', day16RewardStatus: '已发放' },
+                    { id: 6, memberId: 6, name: '孙八', amount: ORDER_PRICE, type: '普通订单', orderTime: '2025-09-03', day16RewardStatus: '已发放' },
+                    { id: 7, memberId: 7, name: '周九', amount: ORDER_PRICE, type: '普通订单', orderTime: '2025-09-03', day16RewardStatus: '已发放' }
+                ];
+                
+                // 生成订单号
+                demoOrders.forEach((order, index) => {
+                    order.orderNo = 'LG' + order.orderTime.replace(/-/g, '') + (index + 1).toString().padStart(4, '0');
+                    orders.push(order);
+                });
+                
+                // 创建奖励记录
+                let demoRewards = [
+                    { memberId: 1, name: '张三', type: '直推奖', amount: 99.9, rewardTime: '2025-09-02', targetMemberId: 2 },
+                    { memberId: 1, name: '张三', type: '直推奖', amount: 99.9, rewardTime: '2025-09-02', targetMemberId: 3 },
+                    { memberId: 1, name: '张三', type: '直推奖', amount: 99.9, rewardTime: '2025-09-02', targetMemberId: 4 },
+                    { memberId: 2, name: '李四', type: '直推奖', amount: 99.9, rewardTime: '2025-09-03', targetMemberId: 5 },
+                    { memberId: 2, name: '李四', type: '直推奖', amount: 99.9, rewardTime: '2025-09-03', targetMemberId: 6 },
+                    { memberId: 2, name: '李四', type: '直推奖', amount: 99.9, rewardTime: '2025-09-03', targetMemberId: 7 },
+                    { memberId: 1, name: '张三', type: '区代奖', amount: 99.9, rewardTime: '2025-09-03', targetMemberId: 5 },
+                    { memberId: 1, name: '张三', type: '系统奖励', amount: 200, rewardTime: '2025-09-17', targetMemberId: 1 }
+                ];
+                
+                demoRewards.forEach((rewardData, index) => {
+                    let points = allocatePoints(rewardData.amount);
+                    let reward = {
+                        id: index + 1,
+                        memberId: rewardData.memberId,
+                        name: rewardData.name,
+                        type: rewardData.type,
+                        amount: rewardData.amount,
+                        greenPoints: points.green,
+                        redPoints: points.red,
+                        rewardTime: rewardData.rewardTime,
+                        targetMemberId: rewardData.targetMemberId
+                    };
+                    rewards.push(reward);
+                });
+                
+                // 保存数据
+                localStorage.setItem('members', JSON.stringify(members));
+                localStorage.setItem('orders', JSON.stringify(orders));
+                localStorage.setItem('rewards', JSON.stringify(rewards));
+                
+                refreshAllTables();
+                
+                showSuccessMessage('演示数据创建成功！已创建13个会员（1推3，3推9结构）、7个订单和8个奖励记录。');
+            }
+            
+            // 添加会员表单提交
+            $('#addMemberForm').submit(function(e) {
+                e.preventDefault();
+                
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                
+                let memberName = $('#memberName').val().trim();
+                if (!memberName) {
+                    showErrorMessage('请输入会员姓名！');
+                    return;
+                }
+                
+                let memberId = $('#memberId').val().trim();
+                if (memberId) {
+                    memberId = parseInt(memberId);
+                    if (members.some(m => m.id === memberId)) {
+                        showErrorMessage('会员ID已存在，请更换ID！');
+                        return;
+                    }
+                } else {
+                    memberId = getMaxId(members) + 1;
+                }
+                
+                let referrerId = $('#referrer').val().trim() ? parseInt($('#referrer').val()) : '';
+                let contactPersonId = $('#contactPerson').val().trim() ? parseInt($('#contactPerson').val()) : '';
+                let isReinvest = $('#isReinvest').val() === 'true';
+                let registerTime = $('#registerTime').val();
+                
+                // 验证推荐人
+                if (referrerId) {
+                    let referrerExists = members.some(m => m.id === referrerId);
+                    if (!referrerExists) {
+                        showErrorMessage('推荐人ID不存在！');
+                        return;
+                    }
+                }
+                
+                // 验证接点人
+                if (contactPersonId) {
+                    let contactPersonExists = members.some(m => m.id === contactPersonId);
+                    if (!contactPersonExists) {
+                        showErrorMessage('接点人ID不存在！');
+                        return;
+                    }
+                }
+                
+                // 创建新会员
+                let newMember = {
+                    id: memberId,
+                    name: memberName,
+                    referrer: referrerId || '',
+                    contactPerson: contactPersonId || '',
+                    directPush: 0,
+                    level: '会员',
+                    repurchaseTimes: 0,
+                    orderCount: 0,
+                    totalPerformance: 0,
+                    systemReward: 0,
+                    directReward: 0,
+                    areaReward: 0,
+                    peerReward: 0,
+                    cityReward: 0,
+                    greenPoints: 0,
+                    redPoints: 0,
+                    totalIncome: 0,
+                    registerTime: registerTime,
+                    isReinvest: isReinvest,
+                    isEmptyAccount: true
+                };
+                
+                members.push(newMember);
+                localStorage.setItem('members', JSON.stringify(members));
+                
+                refreshAllTables();
+                $(this)[0].reset();
+                $('#registerTime').val(formatDate(baseTime));
+                
+                showSuccessMessage(`会员【${newMember.name}】添加成功！ID：${newMember.id}`);
+            });
+            
+            // 添加订单表单提交
+            $('#addOrderForm').submit(function(e) {
+                e.preventDefault();
+                
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                
+                let memberId = parseInt($('#orderMemberId').val());
+                let memberName = $('#orderMemberName').val().trim();
+                
+                if (!memberId) {
+                    showErrorMessage('请输入会员ID！');
+                    return;
+                }
+                
+                // 验证会员
+                let member = members.find(m => m.id === memberId);
+                if (!member) {
+                    showErrorMessage('会员不存在！');
+                    return;
+                }
+                
+                if (member.name !== memberName) {
+                    showErrorMessage('会员姓名与ID不匹配！');
+                    return;
+                }
+                
+                let orderId = getMaxId(orders) + 1;
+                let orderNo = 'LG' + formatDateForOrderNo(new Date($('#orderTime').val())) + 
+                             Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+                let orderType = $('#orderType').val();
+                let orderTime = $('#orderTime').val();
+                
+                let newOrder = {
+                    id: orderId,
+                    memberId: memberId,
+                    name: memberName,
+                    amount: ORDER_PRICE,
+                    type: orderType,
+                    orderNo: orderNo,
+                    orderTime: orderTime,
+                    day16RewardStatus: orderType === '复购订单' ? '无' : '未到时间'
+                };
+                
+                orders.push(newOrder);
+                localStorage.setItem('orders', JSON.stringify(orders));
+                
+                // 更新会员状态（不再是空号）
+                member.isEmptyAccount = false;
+                member.orderCount = (member.orderCount || 0) + 1;
+                localStorage.setItem('members', JSON.stringify(members));
+                
+                // 计算奖励
+                showLoading('正在计算奖励...');
+                setTimeout(() => {
+                    calculateOrderRewardsOptimized(memberId, orderTime, memberName);
+                    
+                    setTimeout(() => {
+                        refreshAllTables();
+                        $(this)[0].reset();
+                        $('#orderTime').val(formatDate(baseTime));
+                        $('#orderAmount').val(ORDER_PRICE);
+                        hideLoading();
+                        
+                        showSuccessMessage(`订单添加成功！订单编号：${newOrder.orderNo}`);
+                    }, 500);
+                }, 100);
+            });
+            
+            // 添加奖励表单提交
+            $('#addRewardForm').submit(function(e) {
+                e.preventDefault();
+                
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                
+                let memberId = parseInt($('#rewardMemberId').val());
+                let memberName = $('#rewardMemberName').val().trim();
+                let rewardAmount = parseFloat($('#rewardAmount').val());
+                let rewardType = $('#rewardType').val();
+                
+                if (!memberId) {
+                    showErrorMessage('请输入会员ID！');
+                    return;
+                }
+                
+                // 验证会员
+                let member = members.find(m => m.id === memberId);
+                if (!member) {
+                    showErrorMessage('会员不存在！');
+                    return;
+                }
+                
+                if (member.name !== memberName) {
+                    showErrorMessage('会员姓名与ID不匹配！');
+                    return;
+                }
+                
+                if (member.isEmptyAccount) {
+                    showErrorMessage('该会员是空号（未下单），无法添加奖励！');
+                    return;
+                }
+                
+                if (!rewardType) {
+                    showErrorMessage('请选择奖励类型！');
+                    return;
+                }
+                
+                if (!rewardAmount || rewardAmount <= 0) {
+                    showErrorMessage('请输入有效的奖励金额！');
+                    return;
+                }
+                
+                let rewardId = getMaxId(rewards) + 1;
+                let points = allocatePoints(rewardAmount);
+                let targetMemberId = $('#targetMemberId').val().trim() ? parseInt($('#targetMemberId').val()) : '';
+                
+                let newReward = {
+                    id: rewardId,
+                    memberId: memberId,
+                    name: memberName,
+                    type: rewardType,
+                    amount: rewardAmount,
+                    greenPoints: points.green,
+                    redPoints: points.red,
+                    rewardTime: $('#rewardTime').val(),
+                    targetMemberId: targetMemberId
+                };
+                
+                rewards.push(newReward);
+                localStorage.setItem('rewards', JSON.stringify(rewards));
+                
+                refreshAllTables();
+                $(this)[0].reset();
+                $('#rewardTime').val(formatDate(baseTime));
+                
+                showSuccessMessage(`奖励添加成功！绿积分+${points.green.toFixed(2)} 红积分+${points.red.toFixed(2)}`);
+                
+                // 检查自动复购
+                checkAutoRepurchase(memberId);
+            });
+            
+            // 筛选奖励
+            $('#filterRewardBtn').click(function() {
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                let filterId = $('#filterRewardId').val().trim() ? parseInt($('#filterRewardId').val()) : '';
+                let filterName = $('#filterRewardName').val().trim();
+                let filterType = $('#filterRewardType').val();
+                let filterStart = $('#filterStartTime').val();
+                let filterEnd = $('#filterEndTime').val();
+                
+                let filteredRewards = rewards.filter(reward => {
+                    if (filterId && reward.id !== filterId) return false;
+                    if (filterName && !reward.name.includes(filterName)) return false;
+                    if (filterType && reward.type !== filterType) return false;
+                    if (filterStart && reward.rewardTime < filterStart) return false;
+                    if (filterEnd && reward.rewardTime > filterEnd) return false;
+                    return true;
+                });
+                
+                renderRewardTable(filteredRewards);
+                
+                if (filteredRewards.length === 0) {
+                    showErrorMessage('没有找到匹配的奖励记录！');
+                }
+            });
+            
+            // 生成统计报表
+            $('#statisticsBtn').click(function() {
+                showLoading('正在生成统计报表...');
+                setTimeout(() => {
+                    refreshStatistics();
+                    hideLoading();
+                    showSuccessMessage('统计报表已生成！');
+                }, 300);
+            });
+            
+            // ================ 导入订单自动计算奖励功能 ================
+            
+            // 导入订单数据并自动计算奖励
+            $('#importOrderBtn').click(function() {
+                let fileInput = $('#importOrderFile')[0];
+                if (fileInput.files.length === 0) {
+                    showErrorMessage('请选择要导入的CSV文件！');
+                    return;
+                }
+                
+                let file = fileInput.files[0];
+                let reader = new FileReader();
+                
+                reader.onload = async function(e) {
+                    try {
+                        showLoading('正在导入订单数据...');
+                        updateLoading(10, '读取文件内容...');
+                        
+                        let csvContent = e.target.result;
+                        if (csvContent.charCodeAt(0) === 0xFEFF) {
+                            csvContent = csvContent.substring(1);
+                        }
+                        
+                        updateLoading(20, '解析CSV数据...');
+                        let lines = csvContent.split('\n').filter(line => line.trim() !== '');
+                        if (lines.length <= 1) {
+                            hideLoading();
+                            showErrorMessage('CSV文件没有数据！');
+                            return;
+                        }
+                        
+                        // 移除标题行
+                        let headers = lines[0].split(',').map(col => col.trim().replace(/"/g, ''));
+                        lines.shift();
+                        
+                        updateLoading(30, '验证数据格式...');
+                        let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                        let members = JSON.parse(localStorage.getItem('members')) || [];
+                        let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                        
+                        let newOrders = [];
+                        let updatedOrders = [];
+                        let importCount = 0;
+                        let updateCount = 0;
+                        let errorCount = 0;
+                        
+                        updateLoading(40, '处理订单数据...');
+                        // 处理每一行数据
+                        for (let i = 0; i < lines.length; i++) {
+                            if (lines[i].trim() === '') continue;
+                            
+                            try {
+                                // 处理CSV行，考虑引号内的逗号
+                                let columns = parseCSVLine(lines[i]);
+                                
+                                if (columns.length >= 8) {
+                                    let id = parseInt(columns[0]) || 0;
+                                    let memberId = parseInt(columns[1]) || 0;
+                                    let name = columns[2].trim();
+                                    let amount = parseFloat(columns[3]) || ORDER_PRICE;
+                                    let type = columns[4].trim() || '普通订单';
+                                    let orderNo = columns[5].trim();
+                                    let orderTime = columns[6].trim();
+                                    let day16RewardStatus = columns[7].trim() || '未到时间';
+                                    
+                                    // 验证会员是否存在
+                                    let member = members.find(m => m.id === memberId);
+                                    if (!member) {
+                                        errorCount++;
+                                        console.warn(`订单ID ${id}: 会员ID ${memberId} 不存在，跳过此订单`);
+                                        continue;
+                                    }
+                                    
+                                    // 检查订单是否已存在
+                                    let existingIndex = orders.findIndex(o => o.id === id);
+                                    
+                                    let orderData = {
+                                        id: id,
+                                        memberId: memberId,
+                                        name: name,
+                                        amount: amount,
+                                        type: type,
+                                        orderNo: orderNo || ('LG' + orderTime.replace(/-/g, '') + Math.floor(Math.random() * 10000).toString().padStart(4, '0')),
+                                        orderTime: orderTime,
+                                        day16RewardStatus: day16RewardStatus
+                                    };
+                                    
+                                    if (existingIndex >= 0) {
+                                        // 更新现有订单
+                                        orders[existingIndex] = orderData;
+                                        updatedOrders.push(orderData);
+                                        updateCount++;
+                                    } else {
+                                        // 新增订单
+                                        orders.push(orderData);
+                                        newOrders.push(orderData);
+                                        importCount++;
+                                        
+                                        // 更新会员状态（不再是空号）
+                                        member.isEmptyAccount = false;
+                                        member.orderCount = (member.orderCount || 0) + 1;
+                                    }
+                                    
+                                    updateLoading(40 + Math.floor((i / lines.length) * 30), `已处理 ${i + 1}/${lines.length} 个订单...`);
+                                }
+                            } catch (error) {
+                                errorCount++;
+                                console.error(`处理第${i+1}行时出错:`, error);
+                            }
+                        }
+                        
+                        updateLoading(70, '保存订单数据...');
+                        localStorage.setItem('orders', JSON.stringify(orders));
+                        localStorage.setItem('members', JSON.stringify(members));
+                        
+                        updateLoading(75, '开始计算订单奖励...');
+                        
+                        // 为新订单计算奖励
+                        let rewardCalculations = [];
+                        for (let i = 0; i < newOrders.length; i++) {
+                            let order = newOrders[i];
+                            updateLoading(75 + Math.floor((i / newOrders.length) * 20), `计算奖励 ${i + 1}/${newOrders.length}...`);
+                            
+                            try {
+                                // 为每个新订单计算奖励
+                                await calculateOrderRewardsForImport(order.memberId, order.orderTime, order.name);
+                                rewardCalculations.push({
+                                    orderId: order.id,
+                                    memberId: order.memberId,
+                                    success: true
+                                });
+                            } catch (error) {
+                                rewardCalculations.push({
+                                    orderId: order.id,
+                                    memberId: order.memberId,
+                                    success: false,
+                                    error: error.message
+                                });
+                                errorCount++;
+                            }
+                        }
+                        
+                        updateLoading(95, '刷新数据表格...');
+                        refreshAllTables();
+                        
+                        updateLoading(100, '导入完成！');
+                        setTimeout(() => {
+                            hideLoading();
+                            
+                            // 显示导入结果
+                            let message = `订单数据导入完成！`;
+                            message += `\n新增订单: ${importCount} 个`;
+                            message += `\n更新订单: ${updateCount} 个`;
+                            message += `\n成功计算奖励: ${rewardCalculations.filter(r => r.success).length} 个`;
+                            message += `\n错误/跳过: ${errorCount} 个`;
+                            
+                            if (errorCount > 0) {
+                                showErrorMessage(message);
+                            } else {
+                                showSuccessMessage(message);
+                            }
+                            
+                            $('#importOrderFile').val('');
+                        }, 500);
+                        
+                    } catch (error) {
+                        hideLoading();
+                        showErrorMessage(`导入失败：${error.message}`);
+                        console.error('导入错误:', error);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    hideLoading();
+                    showErrorMessage('文件读取失败！');
+                };
+                
+                reader.readAsText(file, 'UTF-8');
+            });
+            
+            // 解析CSV行的辅助函数（处理引号内的逗号）
+            function parseCSVLine(line) {
+                let result = [];
+                let inQuotes = false;
+                let currentField = '';
+                
+                for (let i = 0; i < line.length; i++) {
+                    let char = line[i];
+                    
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(currentField);
+                        currentField = '';
+                    } else {
+                        currentField += char;
+                    }
+                }
+                
+                // 添加最后一个字段
+                result.push(currentField);
+                
+                // 移除字段前后的引号
+                return result.map(field => field.replace(/^"|"$/g, '').trim());
+            }
+            
+            // 为导入订单计算奖励的函数（无UI干扰）
+            async function calculateOrderRewardsForImport(memberId, orderTime, memberName) {
+                return new Promise((resolve) => {
+                    // 直接调用奖励计算函数，但不更新UI
+                    setTimeout(() => {
+                        // 计算直推奖
+                        let members = JSON.parse(localStorage.getItem('members')) || [];
+                        let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                        let member = members.find(m => m.id === memberId);
+                        if (!member) {
+                            resolve();
+                            return;
+                        }
+                        
+                        // 直推奖（给推荐人）
+                        if (member.referrer) {
+                            let referrer = members.find(m => m.id === member.referrer);
+                            if (referrer && !referrer.isEmptyAccount) {
+                                let directRewardAmount = ORDER_PRICE * 0.05;
+                                
+                                // 如果推荐人是区代，需要考虑每日封顶
+                                if (referrer.level === '区代') {
+                                    let todayTotal = rewards
+                                        .filter(r => r.memberId === referrer.id && 
+                                                    r.rewardTime === orderTime &&
+                                                    ['直推奖', '平级奖', '区代奖'].includes(r.type))
+                                        .reduce((sum, r) => sum + r.amount, 0);
+                                    
+                                    let remaining = AREA_AGENT_DAILY_CAP - todayTotal;
+                                    
+                                    if (remaining > 0) {
+                                        let actualReward = Math.min(directRewardAmount, remaining);
+                                        addRewardRecord(
+                                            referrer.id,
+                                            referrer.name,
+                                            '直推奖',
+                                            actualReward,
+                                            orderTime,
+                                            memberId
+                                        );
+                                    }
+                                } else {
+                                    // 非区代，正常发放
+                                    addRewardRecord(
+                                        referrer.id,
+                                        referrer.name,
+                                        '直推奖',
+                                        directRewardAmount,
+                                        orderTime,
+                                        memberId
+                                    );
+                                }
+                            }
+                        }
+                        
+                        // 区代奖
+                        let areaAgents = getUpperAreaAgentsOptimized(memberId);
+                        areaAgents.forEach(agentId => {
+                            let agent = members.find(m => m.id === agentId);
+                            if (agent && !agent.isEmptyAccount && agent.level === '区代') {
+                                let areaReward = calculateAreaReward(agentId, orderTime);
+                                if (areaReward > 0) {
+                                    addRewardRecord(
+                                        agentId,
+                                        agent.name,
+                                        '区代奖',
+                                        areaReward,
+                                        orderTime,
+                                        memberId
+                                    );
+                                }
+                            }
+                        });
+                        
+                        // 平级奖
+                        areaAgents.forEach(agentId => {
+                            let agent = members.find(m => m.id === agentId);
+                            if (agent && !agent.isEmptyAccount && agent.level === '区代') {
+                                let upperAreaAgentId = getUpperAreaAgentForPeerRewardOptimized(agentId);
+                                if (upperAreaAgentId) {
+                                    let upperAgent = members.find(m => m.id === upperAreaAgentId);
+                                    if (upperAgent && upperAgent.level === '区代' && !upperAgent.isEmptyAccount) {
+                                        let areaRewardToday = rewards
+                                            .filter(r => r.memberId === agentId && 
+                                                        r.rewardTime === orderTime &&
+                                                        r.type === '区代奖')
+                                            .reduce((sum, r) => sum + r.amount, 0);
+                                        
+                                        let peerRewardAmount = areaRewardToday;
+                                        
+                                        let todayTotal = rewards
+                                            .filter(r => r.memberId === upperAreaAgentId && 
+                                                        r.rewardTime === orderTime &&
+                                                        ['直推奖', '平级奖', '区代奖'].includes(r.type))
+                                            .reduce((sum, r) => sum + r.amount, 0);
+                                        
+                                        let remaining = AREA_AGENT_DAILY_CAP - todayTotal;
+                                        
+                                        if (remaining > 0 && peerRewardAmount > 0) {
+                                            let actualReward = Math.min(peerRewardAmount, remaining);
+                                            addRewardRecord(
+                                                upperAreaAgentId,
+                                                upperAgent.name,
+                                                '平级奖',
+                                                actualReward,
+                                                orderTime,
+                                                agentId
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // 市代奖
+                        let cityAgents = getUpperCityAgentsOptimized(memberId);
+                        cityAgents.forEach(agentId => {
+                            let agent = members.find(m => m.id === agentId);
+                            if (agent && !agent.isEmptyAccount && agent.level === '市代') {
+                                let cityReward = ORDER_PRICE * 0.03;
+                                addRewardRecord(
+                                    agentId,
+                                    agent.name,
+                                    '市代奖',
+                                    cityReward,
+                                    orderTime,
+                                    memberId
+                                );
+                            }
+                        });
+                        
+                        // 检查自动复购
+                        checkAutoRepurchase(memberId);
+                        
+                        resolve();
+                    }, 50);
+                });
+            }
+            
+            // CSV下载函数
+            function downloadCSV(csvContent, fileName) {
+                let blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                let link = document.createElement("a");
+                let url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", fileName);
+                link.style.display = "none";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+            
+            // 导出会员数据
+            $('#exportMemberBtn').click(function() {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let csvContent = "ID,姓名,推荐人,接点人,直推数量,级别,复购次数,复投,累计业绩,系统奖,直推奖,区代奖,平级奖,市代奖,绿积分,红积分,累计收益,注册时间,是否空号\n";
+                
+                members.forEach(member => {
+                    let isReinvestText = member.isReinvest ? '是' : '否';
+                    let isEmptyAccountText = member.isEmptyAccount ? '是' : '否';
+                    let totalIncome = (member.systemReward + member.directReward + member.areaReward + member.peerReward + member.cityReward).toFixed(2);
+                    
+                    csvContent += `${member.id},${member.name},${member.referrer || ''},${member.contactPerson || ''},${member.directPush},${member.level},${member.repurchaseTimes},${isReinvestText},${member.totalPerformance},${member.systemReward},${member.directReward},${member.areaReward},${member.peerReward},${member.cityReward},${member.greenPoints},${member.redPoints},${totalIncome},${member.registerTime},${isEmptyAccountText}\n`;
+                });
+                
+                downloadCSV(csvContent, '凌冠会员信息表.csv');
+                showSuccessMessage('会员信息表导出成功！');
+            });
+            
+            // 导出订单数据
+            $('#exportOrderBtn').click(function() {
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let csvContent = "ID,会员ID,姓名,下单金额,订单类型,订单编号,下单时间,16天奖励状态\n";
+                
+                orders.forEach(order => {
+                    let rewardStatus = order.day16RewardStatus || '未到时间';
+                    if (order.type === '复购订单') rewardStatus = '无';
+                    
+                    csvContent += `${order.id},${order.memberId},${order.name},${order.amount},${order.type},${order.orderNo},${order.orderTime},${rewardStatus}\n`;
+                });
+                
+                downloadCSV(csvContent, '凌冠订单表.csv');
+                showSuccessMessage('订单表导出成功！');
+            });
+            
+            // 导出奖励数据
+            $('#exportRewardBtn').click(function() {
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                let csvContent = "ID,会员ID,姓名,奖励类型,奖励数量,绿积分,红积分,奖励时间,对方ID\n";
+                
+                rewards.forEach(reward => {
+                    csvContent += `${reward.id},${reward.memberId},${reward.name},${reward.type},${reward.amount},${reward.greenPoints},${reward.redPoints},${reward.rewardTime},${reward.targetMemberId || ''}\n`;
+                });
+                
+                downloadCSV(csvContent, '凌冠积分奖励表.csv');
+                showSuccessMessage('积分奖励表导出成功！');
+            });
+            
+            // 导出统计报表
+            $('#exportStatisticsBtn').click(function() {
+                refreshStatistics();
+                
+                // 生成详细统计CSV
+                let csvContent = "日期,普通订单,复购订单,总订单数,总金额,16天奖励,系统奖励,直推奖,区代奖,平级奖,市代奖,总奖励,绿积分,红积分\n";
+                
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                
+                // 获取所有日期
+                let allDates = new Set();
+                orders.forEach(order => allDates.add(order.orderTime));
+                rewards.forEach(reward => allDates.add(reward.rewardTime));
+                
+                let sortedDates = Array.from(allDates).sort();
+                
+                sortedDates.forEach(date => {
+                    let stats = {
+                        normalOrders: 0,
+                        repurchaseOrders: 0,
+                        totalOrders: 0,
+                        totalAmount: 0,
+                        day16Rewards: 0,
+                        systemRewards: 0,
+                        directRewards: 0,
+                        areaRewards: 0,
+                        peerRewards: 0,
+                        cityRewards: 0,
+                        totalRewards: 0,
+                        greenPoints: 0,
+                        redPoints: 0
+                    };
+                    
+                    // 统计当天订单
+                    orders.filter(o => o.orderTime === date).forEach(order => {
+                        if (order.type === '普通订单') {
+                            stats.normalOrders++;
+                        } else {
+                            stats.repurchaseOrders++;
+                        }
+                        stats.totalOrders++;
+                        stats.totalAmount += order.amount;
+                        
+                        if (order.day16RewardStatus === '已发放') {
+                            stats.day16Rewards += DAY16_REWARD;
+                            stats.systemRewards += DAY16_REWARD;
+                        }
+                    });
+                    
+                    // 统计当天奖励
+                    rewards.filter(r => r.rewardTime === date).forEach(reward => {
+                        switch(reward.type) {
+                            case '系统奖励':
+                                stats.systemRewards += reward.amount;
+                                break;
+                            case '直推奖':
+                                stats.directRewards += reward.amount;
+                                break;
+                            case '区代奖':
+                                stats.areaRewards += reward.amount;
+                                break;
+                            case '平级奖':
+                                stats.peerRewards += reward.amount;
+                                break;
+                            case '市代奖':
+                                stats.cityRewards += reward.amount;
+                                break;
+                        }
+                        stats.totalRewards += reward.amount;
+                        stats.greenPoints += reward.greenPoints;
+                        stats.redPoints += reward.redPoints;
+                    });
+                    
+                    csvContent += `${date},${stats.normalOrders},${stats.repurchaseOrders},${stats.totalOrders},${stats.totalAmount.toFixed(2)},${stats.day16Rewards.toFixed(2)},${stats.systemRewards.toFixed(2)},${stats.directRewards.toFixed(2)},${stats.areaRewards.toFixed(2)},${stats.peerRewards.toFixed(2)},${stats.cityRewards.toFixed(2)},${stats.totalRewards.toFixed(2)},${stats.greenPoints.toFixed(2)},${stats.redPoints.toFixed(2)}\n`;
+                });
+                
+                downloadCSV(csvContent, '凌冠统计报表.csv');
+                showSuccessMessage('统计报表导出成功！');
+            });
+            
+            // 导出所有数据
+            $('#exportAllBtn').click(function() {
+                $('#exportMemberBtn').click();
+                setTimeout(() => $('#exportOrderBtn').click(), 500);
+                setTimeout(() => $('#exportRewardBtn').click(), 1000);
+                setTimeout(() => $('#exportStatisticsBtn').click(), 1500);
+                setTimeout(() => showSuccessMessage('所有数据已导出完成！'), 2000);
+            });
+            
+            // 导入会员数据
+            $('#importMemberBtn').click(function() {
+                let fileInput = $('#importMemberFile')[0];
+                if (fileInput.files.length === 0) {
+                    showErrorMessage('请选择要导入的CSV文件！');
+                    return;
+                }
+                
+                let file = fileInput.files[0];
+                let reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        showLoading('正在导入会员数据...');
+                        updateLoading(30, '读取文件...');
+                        
+                        let csvContent = e.target.result;
+                        // 移除BOM头
+                        if (csvContent.charCodeAt(0) === 0xFEFF) {
+                            csvContent = csvContent.substring(1);
+                        }
+                        
+                        updateLoading(50, '解析数据...');
+                        let lines = csvContent.split('\n').filter(line => line.trim() !== '');
+                        // 移除标题行
+                        lines.shift();
+                        
+                        let members = JSON.parse(localStorage.getItem('members')) || [];
+                        let importCount = 0;
+                        let updateCount = 0;
+                        
+                        lines.forEach(line => {
+                            if (line.trim() === '') return;
+                            
+                            let columns = line.split(',').map(col => col.replace(/^"|"$/g, '').trim());
+                            
+                            if (columns.length >= 19) {
+                                let id = parseInt(columns[0]) || 0;
+                                let existingIndex = members.findIndex(m => m.id === id);
+                                
+                                let memberData = {
+                                    id: id,
+                                    name: columns[1],
+                                    referrer: columns[2] ? parseInt(columns[2]) : '',
+                                    contactPerson: columns[3] ? parseInt(columns[3]) : '',
+                                    directPush: parseInt(columns[4]) || 0,
+                                    level: columns[5],
+                                    repurchaseTimes: parseInt(columns[6]) || 0,
+                                    isReinvest: columns[7] === '是',
+                                    totalPerformance: parseInt(columns[8]) || 0,
+                                    systemReward: parseFloat(columns[9]) || 0,
+                                    directReward: parseFloat(columns[10]) || 0,
+                                    areaReward: parseFloat(columns[11]) || 0,
+                                    peerReward: parseFloat(columns[12]) || 0,
+                                    cityReward: parseFloat(columns[13]) || 0,
+                                    greenPoints: parseFloat(columns[14]) || 0,
+                                    redPoints: parseFloat(columns[15]) || 0,
+                                    totalIncome: parseFloat(columns[16]) || 0,
+                                    registerTime: columns[17],
+                                    isEmptyAccount: columns[18] === '是',
+                                    orderCount: 0
+                                };
+                                
+                                if (existingIndex >= 0) {
+                                    members[existingIndex] = memberData;
+                                    updateCount++;
+                                } else {
+                                    members.push(memberData);
+                                    importCount++;
+                                }
+                            }
+                        });
+                        
+                        updateLoading(80, '保存数据...');
+                        localStorage.setItem('members', JSON.stringify(members));
+                        
+                        updateLoading(90, '刷新界面...');
+                        refreshAllTables();
+                        
+                        updateLoading(100, '导入完成！');
+                        setTimeout(() => {
+                            hideLoading();
+                            showSuccessMessage(`会员数据导入成功！新增: ${importCount} 条，更新: ${updateCount} 条`);
+                            $('#importMemberFile').val('');
+                        }, 500);
+                    } catch (error) {
+                        hideLoading();
+                        showErrorMessage(`导入失败：${error.message}`);
+                        console.error('导入错误:', error);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    hideLoading();
+                    showErrorMessage('文件读取失败！');
+                };
+                
+                reader.readAsText(file, 'UTF-8');
+            });
+            
+            // 导入奖励数据
+            $('#importRewardBtn').click(function() {
+                let fileInput = $('#importRewardFile')[0];
+                if (fileInput.files.length === 0) {
+                    showErrorMessage('请选择要导入的CSV文件！');
+                    return;
+                }
+                
+                let file = fileInput.files[0];
+                let reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        showLoading('正在导入奖励数据...');
+                        updateLoading(30, '读取文件...');
+                        
+                        let csvContent = e.target.result;
+                        if (csvContent.charCodeAt(0) === 0xFEFF) {
+                            csvContent = csvContent.substring(1);
+                        }
+                        
+                        updateLoading(50, '解析数据...');
+                        let lines = csvContent.split('\n').filter(line => line.trim() !== '');
+                        lines.shift();
+                        
+                        let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                        let importCount = 0;
+                        let updateCount = 0;
+                        
+                        lines.forEach(line => {
+                            if (line.trim() === '') return;
+                            
+                            let columns = line.split(',').map(col => col.replace(/^"|"$/g, '').trim());
+                            
+                            if (columns.length >= 9) {
+                                let id = parseInt(columns[0]) || 0;
+                                let existingIndex = rewards.findIndex(r => r.id === id);
+                                
+                                let rewardData = {
+                                    id: id,
+                                    memberId: parseInt(columns[1]) || 0,
+                                    name: columns[2],
+                                    type: columns[3],
+                                    amount: parseFloat(columns[4]) || 0,
+                                    greenPoints: parseFloat(columns[5]) || 0,
+                                    redPoints: parseFloat(columns[6]) || 0,
+                                    rewardTime: columns[7],
+                                    targetMemberId: columns[8] ? parseInt(columns[8]) : ''
+                                };
+                                
+                                if (existingIndex >= 0) {
+                                    rewards[existingIndex] = rewardData;
+                                    updateCount++;
+                                } else {
+                                    rewards.push(rewardData);
+                                    importCount++;
+                                }
+                            }
+                        });
+                        
+                        updateLoading(80, '保存数据...');
+                        localStorage.setItem('rewards', JSON.stringify(rewards));
+                        
+                        updateLoading(90, '刷新界面...');
+                        refreshAllTables();
+                        
+                        updateLoading(100, '导入完成！');
+                        setTimeout(() => {
+                            hideLoading();
+                            showSuccessMessage(`奖励数据导入成功！新增: ${importCount} 条，更新: ${updateCount} 条`);
+                            $('#importRewardFile').val('');
+                        }, 500);
+                    } catch (error) {
+                        hideLoading();
+                        showErrorMessage(`导入失败：${error.message}`);
+                        console.error('导入错误:', error);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    hideLoading();
+                    showErrorMessage('文件读取失败！');
+                };
+                
+                reader.readAsText(file, 'UTF-8');
+            });
+            
+            // 清空数据
+            $('#clearMemberBtn').click(function() {
+                if (confirm('确定要清空会员信息表吗？此操作不可恢复！')) {
+                    localStorage.setItem('members', JSON.stringify([]));
+                    refreshAllTables();
+                    showSuccessMessage('会员信息表已清空！');
+                }
+            });
+            
+            $('#clearOrderBtn').click(function() {
+                if (confirm('确定要清空订单表吗？此操作不可恢复！')) {
+                    localStorage.setItem('orders', JSON.stringify([]));
+                    refreshAllTables();
+                    showSuccessMessage('订单表已清空！');
+                }
+            });
+            
+            $('#clearRewardBtn').click(function() {
+                if (confirm('确定要清空积分奖励表吗？此操作不可恢复！')) {
+                    localStorage.setItem('rewards', JSON.stringify([]));
+                    refreshAllTables();
+                    showSuccessMessage('积分奖励表已清空！');
+                }
+            });
+            
+            $('#clearAllBtn').click(function() {
+                if (confirm('确定要清空所有表数据吗？此操作不可恢复！')) {
+                    localStorage.setItem('members', JSON.stringify([]));
+                    localStorage.setItem('orders', JSON.stringify([]));
+                    localStorage.setItem('rewards', JSON.stringify([]));
+                    refreshAllTables();
+                    showSuccessMessage('所有表数据已清空！');
+                }
+            });
+            
+            // 编辑会员
+            $(document).on('click', '.edit-member', function() {
+                let memberId = $(this).data('id');
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let member = members.find(m => m.id === memberId);
+                
+                if (member) {
+                    $('#editMemberId').val(member.id);
+                    $('#editMemberName').val(member.name);
+                    $('#editReferrer').val(member.referrer || '');
+                    $('#editContactPerson').val(member.contactPerson || '');
+                    $('#editDirectPush').val(member.directPush || 0);
+                    $('#editMemberLevel').val(member.level);
+                    $('#editIsReinvest').val(member.isReinvest ? 'true' : 'false');
+                    $('#editRepurchaseTimes').val(member.repurchaseTimes || 0);
+                    $('#editOrderCount').val(member.orderCount || 0);
+                    $('#editTotalPerformance').val(member.totalPerformance || 0);
+                    $('#editSystemReward').val(member.systemReward || 0);
+                    $('#editDirectReward').val(member.directReward || 0);
+                    $('#editAreaReward').val(member.areaReward || 0);
+                    $('#editPeerReward').val(member.peerReward || 0);
+                    $('#editCityReward').val(member.cityReward || 0);
+                    $('#editGreenPoints').val(member.greenPoints || 0);
+                    $('#editRedPoints').val(member.redPoints || 0);
+                    $('#editTotalIncome').val(member.totalIncome || 0);
+                    $('#editIsEmptyAccount').val(member.isEmptyAccount ? 'true' : 'false');
+                    $('#editRegisterTime').val(member.registerTime);
+                    
+                    $('#editMemberModal').modal('show');
+                }
+            });
+            
+            $('#saveMemberEdit').click(function() {
+                let members = JSON.parse(localStorage.getItem('members')) || [];
+                let memberId = parseInt($('#editMemberId').val());
+                let member = members.find(m => m.id === memberId);
+                
+                if (member) {
+                    member.name = $('#editMemberName').val();
+                    member.referrer = $('#editReferrer').val() ? parseInt($('#editReferrer').val()) : '';
+                    member.contactPerson = $('#editContactPerson').val() ? parseInt($('#editContactPerson').val()) : '';
+                    member.level = $('#editMemberLevel').val();
+                    member.isReinvest = $('#editIsReinvest').val() === 'true';
+                    member.repurchaseTimes = parseInt($('#editRepurchaseTimes').val()) || 0;
+                    member.systemReward = parseFloat($('#editSystemReward').val()) || 0;
+                    member.directReward = parseFloat($('#editDirectReward').val()) || 0;
+                    member.areaReward = parseFloat($('#editAreaReward').val()) || 0;
+                    member.peerReward = parseFloat($('#editPeerReward').val()) || 0;
+                    member.cityReward = parseFloat($('#editCityReward').val()) || 0;
+                    member.greenPoints = parseFloat($('#editGreenPoints').val()) || 0;
+                    member.redPoints = parseFloat($('#editRedPoints').val()) || 0;
+                    member.totalIncome = parseFloat($('#editTotalIncome').val()) || 0;
+                    member.isEmptyAccount = $('#editIsEmptyAccount').val() === 'true';
+                    member.registerTime = $('#editRegisterTime').val();
+                    
+                    localStorage.setItem('members', JSON.stringify(members));
+                    refreshAllTables();
+                    $('#editMemberModal').modal('hide');
+                    showSuccessMessage('会员信息更新成功！');
+                }
+            });
+            
+            // 删除会员
+            $(document).on('click', '.delete-member', function() {
+                let memberId = $(this).data('id');
+                if (confirm('确定要删除此会员吗？此操作不可恢复！')) {
+                    let members = JSON.parse(localStorage.getItem('members')) || [];
+                    members = members.filter(m => m.id !== memberId);
+                    localStorage.setItem('members', JSON.stringify(members));
+                    refreshAllTables();
+                    showSuccessMessage('会员删除成功！');
+                }
+            });
+            
+            // 编辑订单
+            $(document).on('click', '.edit-order', function() {
+                let orderId = $(this).data('id');
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let order = orders.find(o => o.id === orderId);
+                
+                if (order) {
+                    $('#editOrderId').val(order.id);
+                    $('#editOrderMemberId').val(order.memberId);
+                    $('#editOrderMemberName').val(order.name);
+                    $('#editOrderAmount').val(order.amount);
+                    $('#editOrderType').val(order.type);
+                    $('#editOrderTime').val(order.orderTime);
+                    $('#edit16DayRewardStatus').val(order.day16RewardStatus || '未到时间');
+                    
+                    $('#editOrderModal').modal('show');
+                }
+            });
+            
+            $('#saveOrderEdit').click(function() {
+                let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                let orderId = parseInt($('#editOrderId').val());
+                let order = orders.find(o => o.id === orderId);
+                
+                if (order) {
+                    order.memberId = parseInt($('#editOrderMemberId').val());
+                    order.name = $('#editOrderMemberName').val();
+                    order.type = $('#editOrderType').val();
+                    order.orderTime = $('#editOrderTime').val();
+                    order.day16RewardStatus = $('#edit16DayRewardStatus').val();
+                    
+                    localStorage.setItem('orders', JSON.stringify(orders));
+                    refreshAllTables();
+                    $('#editOrderModal').modal('hide');
+                    showSuccessMessage('订单信息更新成功！');
+                }
+            });
+            
+            // 删除订单
+            $(document).on('click', '.delete-order', function() {
+                let orderId = $(this).data('id');
+                if (confirm('确定要删除此订单吗？此操作不可恢复！')) {
+                    let orders = JSON.parse(localStorage.getItem('orders')) || [];
+                    orders = orders.filter(o => o.id !== orderId);
+                    localStorage.setItem('orders', JSON.stringify(orders));
+                    refreshAllTables();
+                    showSuccessMessage('订单删除成功！');
+                }
+            });
+            
+            // 编辑奖励
+            $(document).on('click', '.edit-reward', function() {
+                let rewardId = $(this).data('id');
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                let reward = rewards.find(r => r.id === rewardId);
+                
+                if (reward) {
+                    $('#editRewardId').val(reward.id);
+                    $('#editRewardMemberId').val(reward.memberId);
+                    $('#editRewardMemberName').val(reward.name);
+                    $('#editRewardType').val(reward.type);
+                    $('#editRewardAmount').val(reward.amount);
+                    $('#editRewardTime').val(reward.rewardTime);
+                    $('#editTargetMemberId').val(reward.targetMemberId || '');
+                    
+                    $('#editRewardModal').modal('show');
+                }
+            });
+            
+            $('#saveRewardEdit').click(function() {
+                let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                let rewardId = parseInt($('#editRewardId').val());
+                let reward = rewards.find(r => r.id === rewardId);
+                
+                if (reward) {
+                    reward.memberId = parseInt($('#editRewardMemberId').val());
+                    reward.name = $('#editRewardMemberName').val();
+                    reward.type = $('#editRewardType').val();
+                    reward.amount = parseFloat($('#editRewardAmount').val());
+                    reward.rewardTime = $('#editRewardTime').val();
+                    reward.targetMemberId = $('#editTargetMemberId').val() ? parseInt($('#editTargetMemberId').val()) : '';
+                    
+                    // 重新计算积分
+                    let points = allocatePoints(reward.amount);
+                    reward.greenPoints = points.green;
+                    reward.redPoints = points.red;
+                    
+                    localStorage.setItem('rewards', JSON.stringify(rewards));
+                    refreshAllTables();
+                    $('#editRewardModal').modal('hide');
+                    showSuccessMessage('奖励信息更新成功！');
+                }
+            });
+            
+            // 删除奖励
+            $(document).on('click', '.delete-reward', function() {
+                let rewardId = $(this).data('id');
+                if (confirm('确定要删除此奖励记录吗？此操作不可恢复！')) {
+                    let rewards = JSON.parse(localStorage.getItem('rewards')) || [];
+                    rewards = rewards.filter(r => r.id !== rewardId);
+                    localStorage.setItem('rewards', JSON.stringify(rewards));
+                    refreshAllTables();
+                    showSuccessMessage('奖励记录删除成功！');
+                }
+            });
+            
+            // 初始化显示
+            updateBaseTimeDisplay();
+            refreshAllTables();
+        });
+    </script>
+</body>
+</html>
